@@ -3,6 +3,7 @@ import logging
 
 __all__ = ["logger"]
 
+
 def _setup_logger() -> "logging.Logger":
     from rich.console import Console
     from rich.logging import RichHandler
@@ -19,15 +20,15 @@ def _setup_logger() -> "logging.Logger":
     # this prevents double outputs
     logger.propagate = False
     return logger
-    
+
 
 logger = _setup_logger()
 
-# 修改logger中handler的日志格式
+
 def format_logger(format):
+    # 修改logger中handler的日志格式
     for handler in logger.handlers:
         handler.setFormatter(logging.Formatter(format))
-
 
 
 if __name__ == "__main__":
