@@ -44,7 +44,9 @@ def _method_execution_preproc_container(
     # 容器执行前处理， 需要的数据h5数据
     # 构造R对象的
     task = {}
-    task["expression"] = inputs.X # AnnData的表达矩阵
+    task["expression"] = inputs["expression"] # 表达矩阵，行名列名后续一起传递
+    task["cell_ids"] = inputs["cell_ids"] # 表达矩阵的行名
+    task["feature_ids"] = inputs["feature_ids"] # 表达矩阵的列明
     task["priors"] = priors
     task["parameters"] = parameters
     task["verbose"] = verbose

@@ -11,7 +11,7 @@ from .method_create_ti_method_container import \
 
 
 def _method_execute(
-        dataset,  # AnnData
+        dataset,  # Dict, AnnData is an item
         method,
         parameters,
         give_priors,
@@ -55,6 +55,7 @@ def _method_execute(
             preproc_meta=preproc_meta,
             tmp_wd=tmp_wd
         )
+        trajectory["adata"] = dataset["adata"] # 方便后续绘图
         timings["method_afterpostproc"] < - time.time()
         _method_execution_postproc_container(preproc_meta=preproc_meta)
         timings["execution_stop"] = time.time()
