@@ -63,12 +63,13 @@ def get_dimred(dataset,
             if dataset["dimred_milestones"]:
                 extra_out["dimred_milestones"] = dataset["dimred_milestones"]
             # 分段过程
-            if dataset["dimred_segment_progressions"] and dataset["dimred_segment_points"]:
+            if (not (dataset["dimred_segment_progressions"] is None)) and (not (dataset["dimred_segment_points"] is None)):
                 extra_out["dimred_segment_progressions"] = dataset["dimred_segment_progressions"]
-    
-    dimred = dimred.loc[dataset["cell_ids"]] # 这步对齐是没有必要的
-    
-    return dimred
+                extra_out["dimred_segment_points"] = dataset["dimred_segment_points"]
+
+    dimred = dimred.loc[dataset["cell_ids"]]  # 这步对齐是没有必要的
+
+    return dimred, extra_out
 
 
 def process_dimred(dataset, dimred, identifier="cell_id", has_rownames=True):

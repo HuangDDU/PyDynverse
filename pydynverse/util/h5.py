@@ -1,6 +1,9 @@
+# TODO: 后续通过继承关系AnnData实现Wrapper
 import json
 import sys
 import subprocess
+
+import pandas as pd
 
 from .._logging import logger
 
@@ -89,26 +92,30 @@ class DynverseDockerOutput():
         # 暂时简单设置属性, 后续需要使用数据类型, 再对应转换
         self.id = output_json["id"]
         self.cell_ids = output_json["cell_ids"]
+        # TODO: 可以自动提取键值对,通过setattr来赋值给当前对象的属性
         # self.cell_info = output_json["cell_info"]
         # self.milestone_ids = output_json["milestone_ids"]
         # self.milestone_network = output_json["milestone_network"]
         # self.divergence_regions = output_json["divergence_regions"]
-        # self.milestone_percentages = output_json["milestone_percentages"]
-        # self.progressions = output_json["progressions"]
+        self.milestone_percentages = pd.DataFrame(
+            output_json["milestone_percentages"])
+        self.progressions = pd.DataFrame(output_json["progressions"])
         self.pseudotime = output_json["pseudotime"]
-        # self.trajectory_type = output_json["trajectory_type"]
-        # self.directed = output_json["directed"]
-        # self.dimred = output_json["dimred"]
-        # self.dimred_projected = output_json["dimred_projected"]
-        # self.dimred_milestones = output_json["dimred_milestones"]
-        # self.dimred_segment_progressions = output_json["dimred_segment_progressions"]
-        # self.dimred_segment_points = output_json["dimred_segment_points"]
-        # self.timings = output_json["timings"]
+        self.trajectory_type = output_json["trajectory_type"]
+        self.directed = output_json["directed"]
+        self.dimred = pd.DataFrame(output_json["dimred"], index=self.cell_ids)
+        self.dimred_projected = output_json["dimred_projected"]
+        self.dimred_milestones = output_json["dimred_milestones"]
+        self.dimred_segment_progressions = pd.DataFrame(
+            output_json["dimred_segment_progressions"])
+        self.dimred_segment_points = pd.DataFrame(
+            output_json["dimred_segment_points"])
+        self.timings = output_json["timings"]
 
     def __str__(self) -> str:
         # TODO: 目前只是线性轨迹输出伪时间，需要更多的输出结果适配
         # 目前线性结构，伪时间是最直观的输出
-        return f"id: {self.id}, pseudotime: {self.pseudotime}"
+        return f"id: {self.id}, trajectory_type: {self.trajectory_type}"
 
     def __getitem__(self, key):
         # 通过键名访问属性
@@ -123,7 +130,7 @@ class DynverseDockerOutput():
         setattr(self, key, value)
 
     def __contains__(self, item):
-         return hasattr(self, item)
+        return hasattr(self, item)
 
 
 def write_h5(x, h5_filename):
