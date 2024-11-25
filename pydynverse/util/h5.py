@@ -92,29 +92,35 @@ class DynverseDockerOutput():
         # 暂时简单设置属性, 后续需要使用数据类型, 再对应转换
         self.id = output_json["id"]
         self.cell_ids = output_json["cell_ids"]
-        # TODO: 可以自动提取键值对,通过setattr来赋值给当前对象的属性
+        # 自动提取JSON中的键值对
+        for k, v in output_json.items():
+            self.__setattr__(k, v)
+        # 对部分属性的数据结构修改,方便后续调用
+        self.milestone_percentages = pd.DataFrame(self.milestone_percentages)
+        self.progressions = pd.DataFrame(self.progressions)
+        self.dimred = pd.DataFrame(self.dimred, index=self.cell_ids)
+        self.dimred_segment_progressions = pd.DataFrame(output_json["dimred_segment_progressions"])
+        self.dimred_segment_points = pd.DataFrame(output_json["dimred_segment_points"])
         # self.cell_info = output_json["cell_info"]
         # self.milestone_ids = output_json["milestone_ids"]
         # self.milestone_network = output_json["milestone_network"]
         # self.divergence_regions = output_json["divergence_regions"]
-        self.milestone_percentages = pd.DataFrame(
-            output_json["milestone_percentages"])
-        self.progressions = pd.DataFrame(output_json["progressions"])
-        self.pseudotime = output_json["pseudotime"]
-        self.trajectory_type = output_json["trajectory_type"]
-        self.directed = output_json["directed"]
-        self.dimred = pd.DataFrame(output_json["dimred"], index=self.cell_ids)
-        self.dimred_projected = output_json["dimred_projected"]
-        self.dimred_milestones = output_json["dimred_milestones"]
-        self.dimred_segment_progressions = pd.DataFrame(
-            output_json["dimred_segment_progressions"])
-        self.dimred_segment_points = pd.DataFrame(
-            output_json["dimred_segment_points"])
-        self.timings = output_json["timings"]
+        # self.milestone_percentages = pd.DataFrame(
+        #     output_json["milestone_percentages"])
+        # self.progressions = pd.DataFrame(output_json["progressions"])
+        # self.pseudotime = output_json["pseudotime"]
+        # self.trajectory_type = output_json["trajectory_type"]
+        # self.directed = output_json["directed"]
+        # self.dimred = pd.DataFrame(output_json["dimred"], index=self.cell_ids)
+        # self.dimred_projected = output_json["dimred_projected"]
+        # self.dimred_milestones = output_json["dimred_milestones"]
+        # self.dimred_segment_progressions = pd.DataFrame(
+        #     output_json["dimred_segment_progressions"])
+        # self.dimred_segment_points = pd.DataFrame(
+        #     output_json["dimred_segment_points"])
+        # self.timings = output_json["timings"]
 
     def __str__(self) -> str:
-        # TODO: 目前只是线性轨迹输出伪时间，需要更多的输出结果适配
-        # 目前线性结构，伪时间是最直观的输出
         return f"id: {self.id}, trajectory_type: {self.trajectory_type}"
 
     def __getitem__(self, key):

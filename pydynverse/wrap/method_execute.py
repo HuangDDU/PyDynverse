@@ -26,9 +26,12 @@ def _method_execute(
     timings = {"execution_start": time.time()}
 
     # 提取模型输入input，这里暂时直接返回AnnData
-    inputs = _method_extract_inputs(dataset, method)
-    priors = _method_extract_priors(dataset, method)  # 提取先验知识prior
-    parameters = get_default_parameters(method)  # 提取函数的默认参数
+    inputs = _method_extract_inputs(dataset, method["wrapper"]["inputs"]) # 提取输入,通常是表达矩阵
+    priors = _method_extract_priors(dataset, method["wrapper"]["inputs"], give_priors)  # 提取先验知识prior
+    default_parameters = get_default_parameters(method)  # 提取函数的默认参数
+    if not parameters is None:
+        default_parameters.update(parameters)
+    parameters = default_parameters
 
     # 丢弃关于输入输出流的额外处理
 

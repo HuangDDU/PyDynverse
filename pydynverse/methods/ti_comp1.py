@@ -9,4 +9,8 @@ def ti_comp1(dimred="pca", ndim = 2, component = 1):
         function_name=None,
         package_version=None,
         container_id="dynverse/ti_comp1:v0.9.9.01",
+    )(
+        dimred = dimred,
+        ndim = ndim,
+        component = component
     )

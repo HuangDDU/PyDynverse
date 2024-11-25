@@ -1,4 +1,7 @@
 import docker
+
+from .container_get import _container_get_definition
+from .method_process_definition import _method_process_definition
 from ..util import read_h5, write_h5
 from .._logging import logger
 
@@ -28,12 +31,16 @@ def create_ti_method_container(
         logger.debug(f"Docker image({container_id}) loaded")
 
     # 此时只是有了镜像，容器还没启动
-    return img
+
+    definition = _container_get_definition(container_id)
+    definition["run"] = {"backend": "container", "container_id": container_id}
+    definition = _method_process_definition(definition = definition, return_function = return_function)
+    return definition
 
 
 def _method_execution_preproc_container(
         method,
-        inputs, 
+        inputs,
         tmp_wd,
         priors,
         parameters,
@@ -44,9 +51,9 @@ def _method_execution_preproc_container(
     # 容器执行前处理， 需要的数据h5数据
     # 构造R对象的
     task = {}
-    task["expression"] = inputs["expression"] # 表达矩阵，行名列名后续一起传递
-    task["cell_ids"] = inputs["cell_ids"] # 表达矩阵的行名
-    task["feature_ids"] = inputs["feature_ids"] # 表达矩阵的列明
+    task["expression"] = inputs["expression"]  # 表达矩阵，行名列名后续一起传递
+    task["cell_ids"] = inputs["cell_ids"]  # 表达矩阵的行名
+    task["feature_ids"] = inputs["feature_ids"]  # 表达矩阵的列明
     task["priors"] = priors
     task["parameters"] = parameters
     task["verbose"] = verbose
@@ -73,18 +80,19 @@ def _method_execution_execute_container(method, preproc_meta, tmp_wd):
     # 是否使用先验知识, 这里暂时不启用，否则容器无法读取
     # if preproc_meta["prior_names"]:
     #     args+=["--use_priors", "all"]
+    logger.debug(f"docker args: {args}")
 
     # 启动容器
     client = docker.from_env()
     container = client.containers.run(
-        image=method.tags[0],
-        command=args, # 入口点程序参数
-        volumes=[f"{tmp_wd}:/ti"], # 
+        image=method["run"]["container_id"],
+        command=args,  # 入口点程序参数
+        volumes=[f"{tmp_wd}:/ti"],
         working_dir="/ti/workspace",
         detach=True,
     )
-    
-    container.wait() # 当代入口程序执行完成后在执行后续内容
+    logger.debug(container.logs())
+    container.wait()  # 当代入口程序执行完成后在执行后续内容
     container.stop()
     container.remove()
     logger.debug("Docker Finish")

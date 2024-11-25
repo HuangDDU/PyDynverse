@@ -79,8 +79,9 @@ def plot_dimred(
         if not (dimred_segment_progressions is None) and not (dimred_segment_points is None):
             edge_positions = pd.concat([dimred_segment_progressions, dimred_segment_points], axis=1)
             # TODO: 需要了解WayPoint概念,真正的投影
-            print(edge_positions)
-            ax.scatter(edge_positions[0], edge_positions[1], c="black")
+            milestone_positions = edge_positions[edge_positions["percentage"]==0]
+            ax.scatter(edge_positions[0], edge_positions[1], c="black", s=size_transitions)
+            ax.scatter(milestone_positions[0], milestone_positions[1], c="black", s=size_milestones)
             # waypoint_projection = project_waypoints_coloured()
             # wp_segments = waypoint_projection # 到轨迹上的投影
             # milestone_positions = wp_segments # 过滤
