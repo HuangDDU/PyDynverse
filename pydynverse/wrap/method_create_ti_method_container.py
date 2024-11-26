@@ -111,7 +111,7 @@ def _method_execution_preproc_container(
     task["verbose"] = verbose
     task["seed"] = seed
 
-    write_h5(task, f"{tmp_wd}/input.h5")
+    write_h5(task, f"{tmp_wd}/input.h5")  # 表达矩阵, 先验知识, 参数, 随机种子等都在这个h5这里
 
     path = {}
     path["prior_names"] = "1"
@@ -143,8 +143,9 @@ def _method_execution_execute_container(method, preproc_meta, tmp_wd):
         working_dir="/ti/workspace",
         detach=True,
     )
-    
-    log_list = [log.decode("utf-8").strip() for log in container.logs(stream=True)]
+
+    log_list = [log.decode("utf-8").strip()
+                for log in container.logs(stream=True)]
     # for log in container.logs(stream=True):
     #     logger.debug(log.decode("utf-8").strip())  # 解码日志并实时打印
     container.wait()  # 当代入口程序执行完成后在执行后续内容
@@ -153,7 +154,7 @@ def _method_execution_execute_container(method, preproc_meta, tmp_wd):
 
     if preproc_meta["verbose"]:
         pass
-    
+
     log = "\n".join(log_list)
     output_h5_filename = f"{tmp_wd}/output.h5"
     if not os.path.exists(output_h5_filename):
@@ -163,7 +164,7 @@ def _method_execution_execute_container(method, preproc_meta, tmp_wd):
     else:
         logger.debug("Docker Finish")
         logger.debug(log)
-        dynverse_docker_output = read_h5(f"{tmp_wd}/output.h5") # 读取输出
+        dynverse_docker_output = read_h5(f"{tmp_wd}/output.h5")  # 读取输出
         return dynverse_docker_output
 
 

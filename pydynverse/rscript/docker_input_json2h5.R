@@ -18,7 +18,7 @@ library(Matrix)
 
 input <- fromJSON(input_json_filename)
 
-# 这里稀疏矩阵需要单独处理
+# 这里表达矩阵是稀疏矩阵, 需要单独处理
 expression_id <- input$expression_id # 目标表达矩阵expression, counts
 expression <- input[[expression_id]]
 x <- as.double(expression$x)
@@ -28,6 +28,8 @@ rownames <- as.vector(expression$rownames)
 colnames <- as.vector(expression$colnames)
 Dim <- expression$Dim
 input[[expression_id]] <- new("dgCMatrix", x = x, i = i, p = p, Dim = Dim, Dimnames = list(rownames, colnames))
+
+# 其余的先验知识, 参数, 随机种子等都可以直接传递
 
 dynutils::write_h5(input, input_h5_filename)
 

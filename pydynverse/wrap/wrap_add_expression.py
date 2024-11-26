@@ -4,6 +4,7 @@ import scipy.sparse as sp
 from .._logging import logger
 from .wrap_data import wrap_data
 
+
 def dgC2csc(dgC_obj):
     # 提取列压缩矩阵的行、列、值向量
     row_indices = np.array(dgC_obj.slots["i"])
@@ -11,7 +12,7 @@ def dgC2csc(dgC_obj):
     value_array = np.array(dgC_obj.slots["x"])
     shape = np.array(dgC_obj.slots["Dim"])
 
-    csc =sp.csc_matrix((value_array, row_indices, col_indices), shape=shape)
+    csc = sp.csc_matrix((value_array, row_indices, col_indices), shape=shape)
 
     return csc
 
@@ -30,6 +31,10 @@ def add_expression(data, counts, expression):
     adata.X = counts_csc
 
     return data
+
+
+def is_wrapper_with_expression(dataset):
+    return True
 
 
 def get_expression(dataset, expression_source="expression"):

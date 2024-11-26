@@ -34,8 +34,8 @@ def definition(
         d["parameters"] = df
 
     # 必选输入和可选输入
-    inputs = d["wrapper"]["input_required"]
-    inputs = inputs if type(inputs) == list else [inputs]
+    inputs = d["wrapper"]["input_required"] 
+    inputs = inputs.copy() if type(inputs) == list else [inputs] # 这里后需要修改inputs列表, 使用深拷贝
     if "input_optional" in d["wrapper"]:
         input_optional = d["wrapper"]["input_optional"] 
         inputs += input_optional if type(input_optional) == list else [input_optional]
@@ -66,7 +66,6 @@ def _method_process_definition(definition, return_function):
     if not return_function:
         return definition
     else:
-
         defaults = get_default_parameters(definition)  # 获取代码函数中的参数默认值
 
         def param_overrider_fun(**kwargs):
