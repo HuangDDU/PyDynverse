@@ -1,6 +1,6 @@
 # TODO: 后续通过继承关系AnnData实现Wrapper
+import os
 import json
-import sys
 import subprocess
 
 import pandas as pd
@@ -9,8 +9,9 @@ from .._logging import logger
 
 
 class DynverseDockerInput():
-    def __init__(self, expression, cell_ids, feature_ids, parameters, priors, seed, verbose):
+    def __init__(self, expression, expression_id, cell_ids, feature_ids, parameters, priors, seed, verbose):
         self.expression = expression
+        self.expression_id = expression_id
         self.cell_ids = cell_ids
         self.feature_ids = feature_ids
         self.parameters = parameters
@@ -31,7 +32,8 @@ class DynverseDockerInput():
             "colnames": list(self.feature_ids)
         }
         input_json = {
-            "expression": expression_dict,
+            self.expression_id: expression_dict,
+            "expression_id": self.expression_id,
             "parameters": self.parameters,
             "priors": self.priors,
             "seed": self.seed,
@@ -46,10 +48,8 @@ class DynverseDockerInput():
     def json2h5(self, input_h5_filename):
         self.input_h5_filename = input_h5_filename
         # 调用R脚本，把生成的json文件转化为h5文件，作为dynverse docker容器需要的的输入
-        # 暂时调用脚本，有点丑陋现在, 后面可以使用rpy2在这里写R代码
-        Rscript_filename = "/home/huang/PyCode/scRNA/PyDynverse/RScript/dynverse_docker_io_24_11_21_json2h5.R"
-        # input_json_filename = "/home/huang/PyCode/scRNA/PyDynverse/notebook/output/24.11.20.h5与JSON文件转换/input.json"
-        # input_h5_filename = "/home/huang/PyCode/scRNA/PyDynverse/RScript/output/dynverse_docker_io_24_11_21_json2h5/input.h5"
+        Rscript_filename = f"{os.path.dirname(__file__)}/../rscript/docker_input_json2h5.R"
+        logger.debug(f"h52json script: {Rscript_filename}")
         command_list = [Rscript_filename, "--input_json_filename",
                         self.input_json_filename, "--input_h5_filename", input_h5_filename]
         result = subprocess.run(command_list, capture_output=True, text=True)
@@ -69,10 +69,12 @@ class DynverseDockerOutput():
         self.pseudotime = None
 
     def h52json(self, output_h5_filename, output_json_filename):
+
         self.output_h5_filename = output_h5_filename
         self.output_json_filename = output_json_filename
         # 调用R脚本，把dynverse docker的输出的h5文件转化JSON文件
-        Rscript_filename = "/home/huang/PyCode/scRNA/PyDynverse/RScript/dynverse_docker_io_24_11_21_h52json.R"
+        Rscript_filename = f"{os.path.dirname(__file__)}/../rscript/docker_output_h52json.R"
+        logger.debug(f"h52json script: {Rscript_filename}")
         command_list = [Rscript_filename, "--output_h5_filename",
                         output_h5_filename, "--output_json_filename", output_json_filename]
         result = subprocess.run(command_list, capture_output=True, text=True)
@@ -99,8 +101,10 @@ class DynverseDockerOutput():
         self.milestone_percentages = pd.DataFrame(self.milestone_percentages)
         self.progressions = pd.DataFrame(self.progressions)
         self.dimred = pd.DataFrame(self.dimred, index=self.cell_ids)
-        self.dimred_segment_progressions = pd.DataFrame(output_json["dimred_segment_progressions"])
-        self.dimred_segment_points = pd.DataFrame(output_json["dimred_segment_points"])
+        self.dimred_segment_progressions = pd.DataFrame(
+            output_json["dimred_segment_progressions"])
+        self.dimred_segment_points = pd.DataFrame(
+            output_json["dimred_segment_points"])
         # self.cell_info = output_json["cell_info"]
         # self.milestone_ids = output_json["milestone_ids"]
         # self.milestone_network = output_json["milestone_network"]
@@ -143,8 +147,10 @@ def write_h5(x, h5_filename):
     input_json_filename = f"{h5_filename[:-3]}.json"  # 中间json文件
     input_h5_filename = h5_filename
 
+    expression_id = x["expression_id"]
     dynverse_docker_input = DynverseDockerInput(
-        expression=x["expression"],
+        expression=x[expression_id],
+        expression_id = expression_id,
         cell_ids=x["cell_ids"],
         feature_ids=x["feature_ids"],
         parameters=x["parameters"],
@@ -159,7 +165,6 @@ def write_h5(x, h5_filename):
 def read_h5(h5_filename):
     output_h5_filename = h5_filename
     output_json_filename = f"{h5_filename[:-3]}.json"  # 中间json文件
-    # TODO: 读取Docker容器中轨迹推断方法运行产生的h5文件
     dynverse_docker_output = DynverseDockerOutput()
     dynverse_docker_output.h52json(output_h5_filename, output_json_filename)
     dynverse_docker_output.load_json()
