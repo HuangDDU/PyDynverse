@@ -58,7 +58,7 @@ def _method_execute(
             preproc_meta=preproc_meta,
             tmp_wd=tmp_wd
         )
-        trajectory["adata"] = dataset["adata"] # 方便后续绘图
+        trajectory["adata"] = dataset["adata"] # 额外添加, 方便后续绘图
         timings["method_afterpostproc"] < - time.time()
         _method_execution_postproc_container(preproc_meta=preproc_meta)
         timings["execution_stop"] = time.time()

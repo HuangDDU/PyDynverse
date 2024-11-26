@@ -37,7 +37,8 @@ def definition(
     inputs = d["wrapper"]["input_required"]
     inputs = inputs if type(inputs) == list else [inputs]
     if "input_optional" in d["wrapper"]:
-        inputs += d["wrapper"]["input_optional"]
+        input_optional = d["wrapper"]["input_optional"] 
+        inputs += input_optional if type(input_optional) == list else [input_optional]
     # 参数名称
     params = list(d["parameters"]["id"])
 

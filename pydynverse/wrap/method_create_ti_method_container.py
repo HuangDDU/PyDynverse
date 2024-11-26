@@ -1,9 +1,62 @@
+import os
 import docker
+from tqdm import tqdm
 
 from .container_get import _container_get_definition
 from .method_process_definition import _method_process_definition
 from ..util import read_h5, write_h5
 from .._logging import logger
+
+
+def pull_image_with_progress(image_name, tag="latest", logger_func=None):
+    # 拉取 Docker 镜像并使用 tqdm 实时显示进度条。
+    if logger_func is None:
+        # 没有日志函数, 就使用常规print打印
+        logger_func = print
+    client = docker.from_env()
+    try:
+        logger_func(f"Try to pull image {image_name}:{tag}...\n")
+        api_client = docker.APIClient(
+            base_url="unix://var/run/docker.sock")  # 使用 APIClient 获取流式输出
+        pull_logs = api_client.pull(
+            repository=image_name, tag=tag, stream=True, decode=True)  # 拉取镜像
+        progress_bars = {}  # 初始化 tqdm 进度条, 存储每个 layer 的进度条
+        for log in pull_logs:
+            # 拉取日志为 JSON 格式，解析后展示
+            if "status" in log:
+                status = log["status"]
+                layer_id = log.get("id", None)  # 获取当前的 layer id
+                progress_detail = log.get("progressDetail", {})
+                current = progress_detail.get("current", 0)  # 当前已完成的字节数
+                total = progress_detail.get("total", 0)  # 总字节数
+                # 如果有 layer_id 和 total，更新进度条
+                if layer_id and total:
+                    if layer_id not in progress_bars:
+                        # 创建新的进度条
+                        progress_bars[layer_id] = tqdm(
+                            total=total,
+                            desc=f"Layer {layer_id[:12]}",
+                            unit="B",
+                            unit_scale=True,
+                            unit_divisor=1024
+                        )
+                    progress_bars[layer_id].n = current
+                    progress_bars[layer_id].refresh()
+                # 如果没有进度信息，打印状态
+                elif layer_id:
+                    logger_func(f"{status} {layer_id}".strip())
+                else:
+                    logger_func(f"{status}".strip())
+        # 关闭所有进度条
+        for bar in progress_bars.values():
+            bar.close()
+        logger_func(f"Pull {image_name}:{tag} finish")
+    except docker.errors.APIError as e:
+        logger_func(f"Pull image failed: {e}")
+    except Exception as e:
+        logger_func(f"Other Error: {e}")
+    finally:
+        client.close()
 
 
 def create_ti_method_container(
@@ -25,8 +78,9 @@ def create_ti_method_container(
         # 镜像不存在，需要使用代码下载
         logger.debug(e)
         logger.debug(f"Docker image({container_id}) was not found")
-        logger.debug(f"Try to pull docker image")
-        client.images.pull(container_id)
+        # client.images.pull(container_id)
+        image_name, tag = container_id.split(":")
+        pull_image_with_progress(image_name, tag=tag, logger_func=logger.debug)
         img = client.images.get(container_id)
         logger.debug(f"Docker image({container_id}) loaded")
 
@@ -34,7 +88,8 @@ def create_ti_method_container(
 
     definition = _container_get_definition(container_id)
     definition["run"] = {"backend": "container", "container_id": container_id}
-    definition = _method_process_definition(definition = definition, return_function = return_function)
+    definition = _method_process_definition(
+        definition=definition, return_function=return_function)
     return definition
 
 
@@ -50,9 +105,7 @@ def _method_execution_preproc_container(
 ):
     # 容器执行前处理， 需要的数据h5数据
     # 构造R对象的
-    task = inputs # 表达矩阵，行名列名一起传递
-    # task["cell_ids"] = inputs["cell_ids"]  # 表达矩阵的行名
-    # task["feature_ids"] = inputs["feature_ids"]  # 表达矩阵的列明
+    task = inputs  # 表达矩阵，行名列名一起传递
     task["priors"] = priors
     task["parameters"] = parameters
     task["verbose"] = verbose
@@ -90,19 +143,28 @@ def _method_execution_execute_container(method, preproc_meta, tmp_wd):
         working_dir="/ti/workspace",
         detach=True,
     )
-    logger.debug(container.logs())
+    
+    log_list = [log.decode("utf-8").strip() for log in container.logs(stream=True)]
+    # for log in container.logs(stream=True):
+    #     logger.debug(log.decode("utf-8").strip())  # 解码日志并实时打印
     container.wait()  # 当代入口程序执行完成后在执行后续内容
     container.stop()
     container.remove()
-    logger.debug("Docker Finish")
 
     if preproc_meta["verbose"]:
         pass
-
-    # 读取输出
-    dynverse_docker_output = read_h5(f"{tmp_wd}/output.h5")
-
-    return dynverse_docker_output
+    
+    log = "\n".join(log_list)
+    output_h5_filename = f"{tmp_wd}/output.h5"
+    if not os.path.exists(output_h5_filename):
+        #  没有生成h5文件则docker运行失败, 返回错误信息
+        logger.error("Docker Error!!!")
+        logger.error(log)
+    else:
+        logger.debug("Docker Finish")
+        logger.debug(log)
+        dynverse_docker_output = read_h5(f"{tmp_wd}/output.h5") # 读取输出
+        return dynverse_docker_output
 
 
 def _method_execution_postproc_container(preproc_meta):
