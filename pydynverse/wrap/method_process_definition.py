@@ -34,11 +34,13 @@ def definition(
         d["parameters"] = df
 
     # 必选输入和可选输入
-    inputs = d["wrapper"]["input_required"] 
-    inputs = inputs.copy() if type(inputs) == list else [inputs] # 这里后需要修改inputs列表, 使用深拷贝
+    inputs = d["wrapper"]["input_required"]
+    inputs = inputs.copy() if type(inputs) == list else [
+        inputs]  # 这里后需要修改inputs列表, 使用深拷贝
     if "input_optional" in d["wrapper"]:
-        input_optional = d["wrapper"]["input_optional"] 
-        inputs += input_optional if type(input_optional) == list else [input_optional]
+        input_optional = d["wrapper"]["input_optional"]
+        inputs += input_optional if type(input_optional) == list else [
+            input_optional]
     # 参数名称
     params = list(d["parameters"]["id"])
 
@@ -62,6 +64,27 @@ def definition(
     return d
 
 
+def get_default_parameters(definition):
+    # 获取轨迹推断方法的默认参数
+    default_parameters = definition["parameters"]["default"]
+    return dict(default_parameters)
+
+
+def convert_definition(definition_raw):
+    return definition(
+        method=definition_raw["method"],
+        wrapper=definition_raw["wrapper"],
+        container=definition_raw["container"],
+        package=definition_raw["package"] if "package" in definition_raw else None,
+        manuscript=definition_raw["manuscript"] if "manuscript" in definition_raw else None,
+        parameters=definition_raw["parameters"],
+    )
+
+
+def _method_load_definition(definition):
+    pass
+
+
 def _method_process_definition(definition, return_function):
     if not return_function:
         return definition
@@ -83,20 +106,3 @@ def _method_process_definition(definition, return_function):
         param_overrider_fun.__kwdefaults__ = defaults
 
         return param_overrider_fun
-
-
-def convert_definition(definition_raw):
-    return definition(
-        method=definition_raw["method"],
-        wrapper=definition_raw["wrapper"],
-        container=definition_raw["container"],
-        package=definition_raw["package"] if "package" in definition_raw else None,
-        manuscript=definition_raw["manuscript"] if "manuscript" in definition_raw else None,
-        parameters=definition_raw["parameters"],
-    )
-
-
-def get_default_parameters(definition):
-    # 获取轨迹推断方法的默认参数
-    default_parameters = definition["parameters"]["default"]
-    return dict(default_parameters)

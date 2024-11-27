@@ -15,7 +15,7 @@ def ti_slingshot(
 ):
     # 选择后端执行, 备选的Docker容器ID, 传参执行
     return method_choose_backend(
-        package_repository=None,
+        package_repository=None, # 注意这里的不是slingshot官网的包, 而是自己的包, 里面的调用是封装好的
         package_name=None,
         function_name=None,
         package_version=None,

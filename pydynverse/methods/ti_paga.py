@@ -26,3 +26,8 @@ def ti_paga(
         embedding_type=embedding_type,
         connectivity_cutoff=connectivity_cutoff
     )
+
+
+def ti_paga_wrapper():
+    # 脚本方式调用paga的封装
+    pass

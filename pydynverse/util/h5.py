@@ -106,6 +106,9 @@ class DynverseDockerOutput():
         self.dimred_segment_points = pd.DataFrame(
             output_json["dimred_segment_points"])
         
+        # json文件添加，方便查可能不同轨迹推断类型对于wrapper的输出
+        self.output_json = output_json
+        
     def __str__(self) -> str:
         return f"""
             id: {self.id}, 
