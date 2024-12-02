@@ -1,34 +1,36 @@
 import numpy as np
+import pandas as pd
 import scipy.sparse as sp
+import anndata as ad
 
 from .._logging import logger
 from .wrap_data import wrap_data
 
 
-def dgC2csc(dgC_obj):
-    # 提取列压缩矩阵的行、列、值向量
-    row_indices = np.array(dgC_obj.slots["i"])
-    col_indices = np.array(dgC_obj.slots["p"])
-    value_array = np.array(dgC_obj.slots["x"])
-    shape = np.array(dgC_obj.slots["Dim"])
-
-    csc = sp.csc_matrix((value_array, row_indices, col_indices), shape=shape)
-
-    return csc
-
-
 def add_expression(data, counts, expression):
 
-    counts_csc = dgC2csc(counts)
-    expression_csc = dgC2csc(expression)
+    # 传入的就是csc矩阵
+    data["counts"] = counts
+    data["expression"] = expression
 
-    data["counts"] = counts_csc
-    data["expression"] = expression_csc
+    feature_ids = data["feature_ids"] 
+    if feature_ids is None:
+        # 之前没有提供feature_ids, 此处根据序号命名
+        feature_ids = [f"feature_{i}" for i in range(data["counts"].shape[1])]
+        feature_info = pd.DataFrame(index=feature_ids)
+        data["feature_ids"] = feature_ids
+        data["feature_info"] = feature_info
 
-    # 同时修改内部的adata
-    adata = data["adata"]
-    adata.layers["counts"] = counts_csc
-    adata.X = counts_csc
+    # 创建adata
+    adata = ad.AnnData(
+        X=counts,
+        obs=data["cell_info"],
+        var=data["feature_info"],
+    )
+    adata.layers["counts"] = counts
+    adata.layers["expression"] = expression
+
+    data["adata"] = adata
 
     return data
 
@@ -55,26 +57,27 @@ def wrap_expression(expression,
                     cell_info=None,
                     feature_info=None,
                     expression_future=None):
-    # 封装让rpy2的expression, counts稀疏矩阵为dataset字典的一项
+    # 从expression矩阵的行名和列名 提取细胞核基因名称
+    cell_ids = expression["cell_ids"]
+    feature_ids = expression["feature_ids"]
 
-    # 解析R对象，获得obs属性
-    cell_ids, feature_ids = counts.slots["Dimnames"]
-    cell_ids = np.array(cell_ids)
-    feature_ids = np.array(feature_ids)
-    logger.debug("Resolving cell_ids and feature_ids")
-
-    # 创建AnnData对象, 初始表达0
+    # 创建基础数据，后续添加AnnData对象
     dataset = wrap_data(
-        cell_ids,
-        feature_ids,
+        cell_ids=cell_ids,
+        feature_ids = feature_ids,
         id=id,
         cell_info=cell_info,
         feature_info=feature_info,
     )
     logger.debug(f"Dataset created: {dataset}")
 
-    # 添加表达矩阵到AnnData对象
-    dataset = add_expression(dataset, counts, expression)
+    # 创建AnnData对象并添加表达矩阵
+    dataset = add_expression(dataset, counts["csc"], expression["csc"])
     logger.debug(f"Andata counts and expression added")
 
+    dataset["pydynwrap:with_expression"] = True
+
     return dataset
+
+def is_wrapper_with_expression(dataset):
+    return dataset.get("pydynwrap:with_expression", False)
