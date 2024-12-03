@@ -5,6 +5,5 @@ __all__ = [
     "methods",
     "plot",
     "dimred",
-
     "logger",
 ]

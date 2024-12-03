@@ -4,6 +4,7 @@ import docker
 
 from .method_process_definition import convert_definition
 
+# NOTE: 这里其实放在method_process_definition更好
 def _container_get_definition(container_id):
     # 提取docker镜像的definition.yml文件, 包括对于方法的描述/参数等
     with tempfile.TemporaryDirectory() as tmp_wd:

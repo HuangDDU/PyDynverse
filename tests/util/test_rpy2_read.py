@@ -16,8 +16,9 @@ def test_rpy2_read():
     assert type(dataset["cell_ids"])==list, "dataset's attibute 'cell_ids' is not a list"
     assert type(dataset["feature_info"])==pd.DataFrame, "dataset's attibute 'feature_info' is not a data frame"
     assert type(dataset["grouping"])==list, "dataset's attibute 'grouping' is not a list"
-    assert type(dataset["counts"])==pd.DataFrame, "dataset's attibute 'count' is not a data frame"
-    assert type(dataset["expression"])==pd.DataFrame, "dataset's attibute 'expression' is not a data frame"
+    # count和expression为字典，且其键为csc, cell_ids, feature_id
+    assert type(dataset["counts"])==dict, "dataset's attibute 'count' is not a dict"
+    assert type(dataset["expression"])==dict, "dataset's attibute 'expression' is not a dict"
 
 if __name__ == "__main__":
     pytest.main()

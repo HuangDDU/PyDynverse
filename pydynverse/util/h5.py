@@ -1,9 +1,11 @@
 # TODO: 后续通过继承关系AnnData实现Wrapper
+# TODO: 参考dyncli中关于read与write中装饰器的使用方式, 改善代码结构
 import os
 import json
 import subprocess
 
 import pandas as pd
+import rpy2.robjects as ro
 
 from .._logging import logger
 
@@ -132,29 +134,41 @@ class DynverseDockerOutput():
         return hasattr(self, item)
 
 
-def write_h5(x, h5_filename):
-    input_json_filename = f"{h5_filename[:-3]}.json"  # 中间json文件
-    input_h5_filename = h5_filename
-
+def write_h5(x, h5_filename, via_json=True):
     expression_id = x["expression_id"]
-    dynverse_docker_input = DynverseDockerInput(
-        expression=x[expression_id],
-        expression_id = expression_id,
-        cell_ids=x["cell_ids"],
-        feature_ids=x["feature_ids"],
-        parameters=x["parameters"],
-        priors=x["priors"],
-        seed=x["seed"],
-        verbose=x["verbose"]
-    )
-    dynverse_docker_input.save_json(input_json_filename)
-    dynverse_docker_input.json2h5(input_h5_filename)
+    if via_json:
+        input_json_filename = f"{h5_filename[:-3]}.json"  # 中间json文件
+        input_h5_filename = h5_filename
+        dynverse_docker_input = DynverseDockerInput(
+            expression=x[expression_id], # 从AnnData里提取
+            expression_id = expression_id,
+            cell_ids=x["cell_ids"],
+            feature_ids=x["feature_ids"],
+            parameters=x["parameters"],
+            priors=x["priors"],
+            seed=x["seed"],
+            verbose=x["verbose"]
+        )
+        dynverse_docker_input.save_json(input_json_filename)
+        dynverse_docker_input.json2h5(input_h5_filename)
+    else:
+        # TODO: 直接通过装饰器的自动转换，不使用json交换文件和单独的R脚本
+        task = x
+        task[expression_id] = None
+        ro.globalenv["task"] = ro.ListVector(task) # 待添加的内容转换到R变量里
+        ro.globalenv["h5_filename"] = ro.ListVector(h5_filename) # 待添加的内容转换到R变量里
+        ro.r("dynutils::write_h5(task, file.path(paths$dir_dynwrap, h5_filename))") # 调用R修改
+    
 
 
-def read_h5(h5_filename):
-    output_h5_filename = h5_filename
-    output_json_filename = f"{h5_filename[:-3]}.json"  # 中间json文件
-    dynverse_docker_output = DynverseDockerOutput()
-    dynverse_docker_output.h52json(output_h5_filename, output_json_filename)
-    dynverse_docker_output.load_json()
-    return dynverse_docker_output
+def read_h5(h5_filename, via_json=True):
+    if via_json:
+        output_h5_filename = h5_filename
+        output_json_filename = f"{h5_filename[:-3]}.json"  # 中间json文件
+        dynverse_docker_output = DynverseDockerOutput()
+        dynverse_docker_output.h52json(output_h5_filename, output_json_filename)
+        dynverse_docker_output.load_json()
+        return dynverse_docker_output
+    else:
+        # TODO: 直接通过装饰器的自动转换，不使用json交换文件和单独的R脚本
+        return 

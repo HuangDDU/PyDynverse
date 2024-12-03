@@ -87,8 +87,10 @@ def _method_load_definition(definition):
 
 def _method_process_definition(definition, return_function):
     if not return_function:
+        # 直接返回字典格式
         return definition
     else:
+        # 返回函数格式，等待默认参数进一步设置
         defaults = get_default_parameters(definition)  # 获取代码函数中的参数默认值
 
         def param_overrider_fun(**kwargs):

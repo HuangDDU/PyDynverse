@@ -30,6 +30,7 @@ def convert_sparse(obj):
             columns = None
         
         # return pd.DataFrame.sparse.from_spmatrix(csr.transpose(), index = index, columns = columns)
+        # 此处返回字典格式
         return {
             "csc" : csc,
             "cell_ids": index,

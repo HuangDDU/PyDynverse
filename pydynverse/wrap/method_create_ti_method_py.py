@@ -12,11 +12,14 @@ def create_ti_method_py(
     # 从python脚本创建轨迹推断方法
     definition = _method_load_definition(definition)
     definition["run"] = {
-        "backend": function
+        "backend": function,
+        "run_fun": run_fun,
+        "package_required": package_required,
+        "package_loaded": package_loaded,
+        "remotes_package": remotes_package,
     }
 
-    definition = _method_process_definition(
-        definition=definition, return_function=return_function)
+    definition = _method_process_definition(definition=definition, return_function=return_function)
 
     return definition
 
@@ -24,7 +27,7 @@ def create_ti_method_py(
 def _method_execution_preproc_function(method):
     run = method["run"]
 
-    # 后续函数调用的执行也不使用
+    # 后续函数执行也不使用这些预处理的结果
 
 
 def _method_execution_execute_function(
