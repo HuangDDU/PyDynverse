@@ -5,9 +5,9 @@ import scanpy as sc
 from .dummy_proofing import check_milestones
 from .add_milestone_coloring import add_milestone_coloring
 from .add_cell_coloring import add_cell_coloring
+from .project_waypoints import project_waypoints_coloured
 
 from ..wrap.wrap_add_dimred import get_dimred
-
 
 def plot_dimred(
         trajectory,
@@ -28,8 +28,7 @@ def plot_dimred(
         expression_source="expression",
 ):
     # TODO: 提取里程碑
-    milestones = check_milestones(
-        trajectory, milestones=milestones, milestone_percentages=milestone_percentages)
+    milestones = check_milestones(trajectory, milestones=milestones, milestone_percentages=milestone_percentages)
     dimred, dimred_extra = get_dimred(
         dataset=trajectory,
         dimred=dimred,
@@ -43,8 +42,7 @@ def plot_dimred(
     # TODO:添加里程碑颜色
     if (plot_milestone_network or plot_trajectory) and color_cells == "milestone":
         if not "color" in milestones:
-            milestones = add_milestone_coloring(
-                milestones, color_milestones=color_milestones)
+            milestones = add_milestone_coloring(milestones, color_milestones=color_milestones)
 
     cell_coloring_output = add_cell_coloring(
         cell_positions=cell_positions,
@@ -82,6 +80,7 @@ def plot_dimred(
             milestone_positions = edge_positions[edge_positions["percentage"]==0]
             ax.scatter(edge_positions[0], edge_positions[1], c="black", s=size_transitions)
             ax.scatter(milestone_positions[0], milestone_positions[1], c="black", s=size_milestones)
+            
             # waypoint_projection = project_waypoints_coloured()
             # wp_segments = waypoint_projection # 到轨迹上的投影
             # milestone_positions = wp_segments # 过滤

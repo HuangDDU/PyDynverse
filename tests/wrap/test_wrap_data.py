@@ -1,7 +1,7 @@
 import pytest
 
 import pandas as pd
-from pydynverse.wrap import wrap_data, is_data_wrapper
+import pydynverse as pdv
 
 
 def test_wrap_data():
@@ -14,11 +14,13 @@ def test_wrap_data():
         "info2": [f"info2_{cell_id}" for cell_id in cell_ids],
     })
     feature_ids = ["g1", "g2", "g3"]
+
+    # 预期输出
     expected_feature_info = pd.DataFrame(index= feature_ids) # 预期输出的feature_info DataFrame
 
-    dataset = wrap_data(id=id, cell_ids=cell_ids, cell_info=cell_info, feature_ids=feature_ids)
+    dataset = pdv.wrap.wrap_data(id=id, cell_ids=cell_ids, cell_info=cell_info, feature_ids=feature_ids)
 
-    assert is_data_wrapper(dataset), "wrapper data failed"
+    assert pdv.wrap.is_data_wrapper(dataset), "wrapper data failed"
     
     assert dataset["cell_ids"]==cell_ids, "cell_ids init failed"
     assert dataset["cell_info"].equals(cell_info), "cell_info init failed"
@@ -28,4 +30,4 @@ def test_wrap_data():
 
 
 if __name__ == "__main__":
-    pytest.main()
+    pytest.main(["-v", __file__])
