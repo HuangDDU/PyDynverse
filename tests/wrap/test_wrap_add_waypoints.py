@@ -1,5 +1,6 @@
 import pytest
 
+import numpy as np
 import pandas as pd
 import pydynverse as pdv
 
@@ -116,15 +117,15 @@ def test_wrap_add_waypoints():
                "W8",
                "MILESTONE_END_WZ_A",],
         data=[
-            [0, 0.8, 1.2, 2, 1.7, 2.4],
-            [1, 0.2, 0.2, 1, 0.7, 1.4],
-            [1, 0.2, 0.2, 1, 0.7, 1.4],
-            [2, 1.2, 1.2, 2, 1.3, 2.4],
-            [1, 0.2, 0.2, 1, 0.7, 1.4],
-            [2, 1.2, 0.8, 0, 0.7, 0.4],
-            [2, 1.2, 0.8, 0, 0.7, 0.4],
-            [3, 2.2, 1.8, 1, 1.7, 0.6],
-            [4, 3.2, 2.8, 2, 2.7, 1.6],
+            [0.0, 0.8, 1.2, 2.0, 1.7, 2.4],
+            [1.0, 0.2, 0.2, 1.0, 0.7, 1.4],
+            [1.0, 0.2, 0.2, 1.0, 0.7, 1.4],
+            [2.0, 1.2, 1.2, 2.0, 1.3, 2.4],
+            [1.0, 0.2, 0.2, 1.0, 0.7, 1.4],
+            [2.0, 1.2, 0.8, 0.0, 0.7, 0.4],
+            [2.0, 1.2, 0.8, 0.0, 0.7, 0.4],
+            [3.0, 2.2, 1.8, 1.0, 1.7, 0.6],
+            [4.0, 3.2, 2.8, 2.0, 2.7, 1.6],
         ]
     )
     expected_waypoint_network = pd.DataFrame(
@@ -152,6 +153,7 @@ def test_wrap_add_waypoints():
         ]
     )
 
+    # 开始断言
     # 关于milestone_percentages, 两个dataframe行顺序不一致, 需要通过waypoint_id和milestone_id联合排序后再比较
     sorted_expected_milestone_percentages = expected_milestone_percentages\
         .sort_values(by=["waypoint_id", "milestone_id"])\
@@ -161,8 +163,13 @@ def test_wrap_add_waypoints():
         .sort_values(by=["waypoint_id", "milestone_id"])\
         .reset_index(drop=True)
     assert sorted_wp_milestone_percentages.equals(sorted_expected_milestone_percentages)
+
     assert wp["progressions"].equals(expected_progression)
-    assert wp["geodesic_distances"] is None # 暂时一致返回None
+
+    # assert wp["geodesic_distances"].equals(expected_geodesic_distances) # 这里调试看的数值是完全一样的，函数调用计算距离经过多次运算后的精度不一致
+    # expected_geodesic_distances.values[1,1]=0.2, wp["geodesic_distances"].values[1,1]=0.19999999999999996
+    assert np.allclose(wp["geodesic_distances"].values, expected_geodesic_distances.values) # 误差在可容忍的范围内
+
     # waypoint_network关于from与to联合排序后再比较
     sorted_expected_waypoint_network = expected_waypoint_network\
         .sort_values(by=["from", "to"])\
@@ -171,6 +178,7 @@ def test_wrap_add_waypoints():
         .sort_values(by=["from", "to"])\
         .reset_index(drop=True)
     assert sorted_wp_waypoint_network.equals(sorted_expected_waypoint_network)
+
     # waypoints关waypoint_id排序后再比较
     sorted_expected_waypoints = expected_waypoints\
         .sort_values(by=["waypoint_id"])\

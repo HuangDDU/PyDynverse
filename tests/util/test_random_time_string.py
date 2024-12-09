@@ -32,4 +32,4 @@ def test_random_time_string_with_name():
     assert all(c.isalnum() for c in parts[2]), "随机字符部分包含非法字符"
 
 if __name__ == "__main__":
-    pytest.main()
+    pytest.main(["-v", __file__])

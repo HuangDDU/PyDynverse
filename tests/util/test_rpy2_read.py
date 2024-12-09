@@ -21,4 +21,4 @@ def test_rpy2_read():
     assert type(dataset["expression"])==dict, "dataset's attibute 'expression' is not a dict"
 
 if __name__ == "__main__":
-    pytest.main()
+    pytest.main(["-v", __file__])

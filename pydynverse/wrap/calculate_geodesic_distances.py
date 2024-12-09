@@ -3,6 +3,7 @@ import pandas as pd
 import networkx as nx
 # from .wrap_add_trajectory import is_wrapper_with_trajectory
 # from .wrap_add_waypoints import is_wrapper_with_waypoints
+from ..util import calculate_distance
 
 
 def calculate_geodesic_distances(
@@ -15,7 +16,7 @@ def calculate_geodesic_distances(
 
     # if (waypoint_cells is None) and is_wrapper_with_waypoints(trajectory):
     #     waypoint_cells <- trajectory["waypoint_cells"]
-    calculate_geodesic_distances_(
+    return calculate_geodesic_distances_(
         cell_ids=trajectory["cell_ids"],
         milestone_ids=trajectory["milestone_ids"],
         milestone_network=trajectory["milestone_network"],
@@ -37,10 +38,8 @@ def calculate_geodesic_distances_(
     waypoint_milestone_percentages=None,
     directed=None
 ):
-    return None
     # 整体思路： 分别在每个发散区域内部计算目标点的全路径， 在整体图上合并计算距离
-
-    # 0. 预处理
+    # NOTE: 0. 预处理
     # 传参进来的cell_ids可能是部分,这里提取轨迹的全部cell_ids
     cell_ids_trajectory = list(set(milestone_percentages["cell_id"]))
 
@@ -53,7 +52,7 @@ def calculate_geodesic_distances_(
         waypoint_ids = []
 
     if not waypoint_milestone_percentages is None:
-        waypoint_ids = waypoint_ids + waypoint_milestone_percentages["waypoint_id"].to_list()
+        waypoint_ids = waypoint_ids + waypoint_milestone_percentages["waypoint_id"].unique().tolist()
         milestone_percentages = pd.concat([
             milestone_percentages,
             waypoint_milestone_percentages.rename(columns={"waypoint_id": "cell_id"})
@@ -97,7 +96,7 @@ def calculate_geodesic_distances_(
     # 准备使用NetworkX, 构造相关数据, 从DataFrame开始构造
     milestone_graph = nx.from_pandas_edgelist(milestone_network, source="from", target="to", edge_attr="length")
 
-    # TODO: 1. 分别计算
+    # NOTE: 1. 分别计算
     # 计算发散区域内部细胞间距离
     def calc_divergence_inner_distance_df(did):
         dir = divergence_regions[divergence_regions["divergence_id"] == did]
@@ -126,32 +125,53 @@ def calculate_geodesic_distances_(
         pct_mat = pd.concat([
             scaled_dists[["cell_id", "milestone_id", "dist"]].rename(columns={"cell_id": "from", "milestone_id": "to", "dist": "length"}),
             tent_distances_long
-        ]).pivot(index="from", columns="to", values="length").fillna(0) # (n_cell+n_milestone+n_waypoint)*n_milestone, 长数据转宽数据
+        ]).pivot(index="from", columns="to", values="length").fillna(0)  # (n_cell+n_milestone+n_waypoint)*n_milestone, 长数据转宽数据, 索引名为from
 
         wp_cells = list(set(pct_mat.index) & set(waypoint_ids))
-        
-        (pct_mat ,pct_mat.loc[wp_cells+tent])
 
-        distances = pd.DataFrame()
+        if directed:
+            # TODO: 暂时不管有向图
+            pass
+
+        distances = calculate_distance(pct_mat, pct_mat.loc[wp_cells+tent], method="manhattan")
+        distances = distances.reset_index().melt(id_vars="from", var_name="to",  value_name="length")  # 宽数据转化为长数据
+        distances = distances[~(distances["from"] == distances["to"])]
         return distances
-
 
     cell_in_tent_distances = pd.concat([calc_divergence_inner_distance_df(did) for did in divergence_ids])
 
     if directed:
-        # 有向图暂时不看
+        # TODO: 暂时不管有向图
         pass
 
-    # TODO: 2. 合并计算
+    # NOTE: 2. 合并计算
     # 合并两个图到一张图上
-    # graph = pd.concat([])
+    graph = pd.concat([milestone_network, cell_in_tent_distances]).groupby(["from", "to"]).agg({"length": "min"}).reset_index()  # 合并后提取最短边，目前没什么效果，可能对环图有用
+    graph = nx.from_pandas_edgelist(graph, source="from", target="to", edge_attr="length")
+    # 选择后续有向图的最短距离模式
+    if directed or directed == "forward":
+        mode = "out"
+    elif directed == "reverse":
+        mode = "in"
+    else:
+        mode = "all"
 
     # 调用dijkstra计算, 计算waypoint和cell之间的
-    out = None
+    out = pd.DataFrame(np.zeros((len(waypoint_ids), len(cell_ids))), index=waypoint_ids, columns=cell_ids)
+    for source in waypoint_ids:
+        length_dict = nx.single_source_dijkstra_path_length(graph, source=source, weight="length")
+        for target in cell_ids:
+            if target in length_dict:
+                out.loc[source, target] = length_dict[target]
+            else:
+                out.loc[source, target] = np.inf
 
-    # 调整waypoint_ids与cell_ids顺序
-    # return out.loc[waypoint_ids, cell_ids]
-    return out
+    # TODO: 过滤一些细胞
+    cell_ids_filtered = []
+    if len(cell_ids_filtered) > 0:
+        pass
+
+    return out.loc[waypoint_ids, cell_ids]
 
 
 def calculate_geodesic_distances_me():

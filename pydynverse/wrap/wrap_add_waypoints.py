@@ -49,8 +49,7 @@ def select_waypoints(
     waypoint_geodesic_distances = calculate_geodesic_distances(
         trajectory,
         waypoint_milestone_percentages=waypoint_milestone_percentages
-    )
-    # .iloc[waypoint_progressions["waypoint_id"]]
+    ).loc[waypoint_progressions["waypoint_id"]]
 
     waypoint_network = waypoint_progressions\
         .sort_values(by=["from", "to", "percentage"])\
@@ -71,7 +70,7 @@ def select_waypoints(
     wp = {
         "milestone_percentages": waypoint_milestone_percentages,
         "progressions": waypoint_progressions,
-        "geodesic_distances": waypoint_geodesic_distances, # TODO: 这里暂时一直返回None， 实现比较复杂， 暂时用不上
+        "geodesic_distances": waypoint_geodesic_distances,
         "waypoint_network": waypoint_network,
         "waypoints": waypoints,
     }
