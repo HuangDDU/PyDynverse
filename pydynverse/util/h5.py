@@ -100,8 +100,10 @@ class DynverseDockerOutput():
         for k, v in output_json.items():
             self.__setattr__(k, v)
         # 对共有的部分属性的数据结构修改, 方便后续调用, 这部分其实就是wrapper对于轨迹推断输出结果的封装
+        self.milestone_network = pd.DataFrame(self.milestone_network)
         self.milestone_percentages = pd.DataFrame(self.milestone_percentages)
         self.progressions = pd.DataFrame(self.progressions)
+        self.divergence_regions = None if (len(self.divergence_regions) == 0) else pd.DataFrame(self.divergence_regions)
         self.dimred = pd.DataFrame(self.dimred, index=self.cell_ids)
         self.dimred_segment_progressions = pd.DataFrame(
             output_json["dimred_segment_progressions"])
@@ -123,8 +125,12 @@ class DynverseDockerOutput():
         if hasattr(self, key):
             return getattr(self, key)
         else:
-            raise KeyError(
-                f"'{self.__class__.__name__}' object has no attribute '{key}'")
+            return None
+            # raise KeyError(
+            #     f"'{self.__class__.__name__}' object has no attribute '{key}'")
+    
+    def get(self, key, default=None):
+        return self[key]
 
     def __setitem__(self, key, value):
         # 通过键名设置属性

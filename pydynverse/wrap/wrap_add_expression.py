@@ -54,13 +54,18 @@ def get_expression(dataset, expression_source="expression"):
 def wrap_expression(expression,
                     counts,
                     id=None,
+                    cell_ids=None,
+                    feature_ids=None,
                     cell_info=None,
                     feature_info=None,
                     expression_future=None):
-    # 从expression矩阵的行名和列名 提取细胞核基因名称
-    cell_ids = expression["cell_ids"]
-    feature_ids = expression["feature_ids"]
-
+    if type(expression) == dict:
+        # R语言来的数据, 从expression矩阵的行名和列名 提取细胞和基因名称
+        cell_ids = expression["cell_ids"]
+        feature_ids = expression["feature_ids"]
+        counts = counts["csc"]
+        expression = expression["csc"]
+        
     # 创建基础数据，后续添加AnnData对象
     dataset = wrap_data(
         cell_ids=cell_ids,
@@ -72,7 +77,7 @@ def wrap_expression(expression,
     logger.debug(f"Dataset created: {dataset}")
 
     # 创建AnnData对象并添加表达矩阵
-    dataset = add_expression(dataset, counts["csc"], expression["csc"])
+    dataset = add_expression(dataset, counts, expression)
     logger.debug(f"Andata counts and expression added")
 
     dataset["pydynwrap:with_expression"] = True

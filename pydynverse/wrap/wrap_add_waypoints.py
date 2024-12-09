@@ -1,4 +1,5 @@
 import math
+import numpy as np
 from .convert_progressions_to_milestone_percentages import convert_progressions_to_milestone_percentages
 from .calculate_geodesic_distances import calculate_geodesic_distances
 
@@ -19,7 +20,7 @@ def select_waypoints(
         return trajectory["waypoints"]
 
     waypoint_progressions = trajectory["milestone_network"].copy()
-    waypoint_progressions["percentage"] = waypoint_progressions["length"].apply(lambda x: [i/x for i in range(0, x, resolution)] + [1])  # 按照分辨率为固定步长划分milestone_network的边, 添加到percentage列上
+    waypoint_progressions["percentage"] = waypoint_progressions["length"].apply(lambda x: [i/x for i in np.arange(0, x, resolution)] + [1])  # 按照分辨率为固定步长划分milestone_network的边, 添加到percentage列上
     waypoint_progressions = waypoint_progressions[["from", "to", "percentage"]]
     waypoint_progressions = waypoint_progressions.explode("percentage").reset_index(drop=True)  # 展开
     waypoint_progressions["percentage"] = waypoint_progressions["percentage"].astype("float")

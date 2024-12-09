@@ -55,7 +55,12 @@ def get_dimred(dataset,
                return_other_dimreds=False):
     # 获得降维结果
     # 执行quickstart里直接来到这里，跳过了R代码中的一堆判断
-    if is_wrapper_with_dimred(dataset):
+    if type(dimred) is pd.DataFrame:
+        # 传入的dimred为DataFrame
+        dimred = dimred
+        extra_out = {}
+        
+    elif is_wrapper_with_dimred(dataset):
         dimred = dataset["dimred"]
         extra_out = {}
         if return_other_dimreds:
@@ -66,6 +71,8 @@ def get_dimred(dataset,
             if (not (dataset["dimred_segment_progressions"] is None)) and (not (dataset["dimred_segment_points"] is None)):
                 extra_out["dimred_segment_progressions"] = dataset["dimred_segment_progressions"]
                 extra_out["dimred_segment_points"] = dataset["dimred_segment_points"]
+    
+    dimred.columns = [f"comp_{i+1}" for i in range(dimred.shape[1])] # 这里的降维维度序号从1开始
 
     dimred = dimred.loc[dataset["cell_ids"]]  # 这步对齐是没有必要的
 
