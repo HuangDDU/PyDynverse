@@ -5,7 +5,7 @@ import pydynverse as pdv
 
 # 数据部分单独提取出来，其他测试用例还能用，例如test_convert_milestone_percentages_to_progressions.py
 def get_test_wrap_data():
-    id = "add_trajectory_new"
+    id = "add_trajectory"
     cell_ids = ["a", "b", "c", "d", "e", "f"]
     milestone_ids = ["A", "B", "C", "D", "E", "F", "G"]
     milestone_network = pd.DataFrame(
@@ -51,7 +51,7 @@ def get_test_wrap_data():
     return dataset, milestone_network, milestone_percentages, divergence_regions
 
 
-def test_add_trajectory():
+def test_wrap_add_trajectory():
     # 测试样例数据
     dataset, milestone_network, milestone_percentages, divergence_regions = get_test_wrap_data()
 

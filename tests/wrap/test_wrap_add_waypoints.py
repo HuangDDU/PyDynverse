@@ -6,7 +6,7 @@ import pydynverse as pdv
 
 
 def get_test_wrap_data():
-    id = "wrap_add_waypoints"
+    id = "test_wrap_add_waypoints"
     cell_ids = ["a", "b", "c", "d", "e", "f"]
     milestone_ids = ["W", "X", "Y", "Z", "A"]
 
