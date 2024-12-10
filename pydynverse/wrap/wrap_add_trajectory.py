@@ -43,14 +43,14 @@ def add_trajectory(
        
 
     if progressions is None:
-        # milestone_percentages -> progressions, 测试用例执行这里
+        # milestone_percentages -> progressions, addtrajectory测试用例执行这里
         check_milestone_percentages(cell_ids, milestone_ids, milestone_percentages)
         progressions = convert_milestone_percentages_to_progressions(cell_ids, milestone_ids, milestone_network, milestone_percentages)
         progressions = check_progressions(cell_ids, milestone_ids, milestone_network, progressions)
     else:
-        # TODO: progressions -> milestone_percentages, slingshot执行这里
-        progressions < - check_progressions(cell_ids, milestone_ids,milestone_network, progressions)
-        milestone_percentages < - convert_progressions_to_milestone_percentages(cell_ids, milestone_ids, milestone_network, progressions)
+        # TODO: progressions -> milestone_percentages, slingshot执行这里, add_branch_trajectory测试用例执行这里
+        progressions = check_progressions(cell_ids, milestone_ids,milestone_network, progressions)
+        milestone_percentages = convert_progressions_to_milestone_percentages(cell_ids, milestone_ids, milestone_network, progressions)
         milestone_percentages = check_milestone_percentages(cell_ids, milestone_ids, milestone_percentages)
 
     # TODO: 检测延迟承诺区域是否把对应的细胞覆盖了

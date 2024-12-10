@@ -8,6 +8,7 @@ from .wrap_add_trajectory import add_trajectory
 from .wrap_gather_cells_at_milestones import gather_cells_at_milestones
 from .convert_milestone_percentages_to_progressions import convert_milestone_percentages_to_progressions
 from .wrap_add_waypoints import select_waypoints
+from .wrap_add_branch_trajectory import add_branch_trajectory
 
 __all__ = [
     "wrap_expression",
@@ -22,4 +23,5 @@ __all__ = [
     "gather_cells_at_milestones",
     "convert_milestone_percentages_to_progressions"
     "select_waypoints",
+    "add_branch_trajectory"
 ]
