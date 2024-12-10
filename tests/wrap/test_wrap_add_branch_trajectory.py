@@ -3,7 +3,7 @@ import pandas as pd
 import pydynverse as pdv
 
 
-def test_wrap_add_branch_trajectory():
+def get_test_wrap_data():
     # 测试样例数据, 与test_wrap_add_waypoints.py实际轨迹相同
     id = "test_wrap_add_branch_trajectory"
     cell_ids = ["a", "b", "c", "d", "e", "f"]
@@ -38,15 +38,19 @@ def test_wrap_add_branch_trajectory():
     )
 
     # 封装数据
-    wr_orig = pdv.wrap.wrap_data(
+    dataset = pdv.wrap.wrap_data(
         id=id,
         cell_ids=cell_ids
     )
+    return dataset, branch_network, branch_progressions, branches
+def test_wrap_add_branch_trajectory():
+    
+    dataset, branch_network, branch_progressions, branches = get_test_wrap_data()
 
     # 添加轨迹
     wr = pdv.wrap.add_branch_trajectory(
-        dataset=wr_orig,
-        branch_ids=branch_ids,
+        dataset=dataset,
+        branch_ids=branches["branch_id"],
         branch_network=branch_network,
         branch_progressions=branch_progressions,
         branches=branches,

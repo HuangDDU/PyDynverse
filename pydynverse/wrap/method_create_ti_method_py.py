@@ -12,7 +12,7 @@ def create_ti_method_py(
     # 从python脚本创建轨迹推断方法
     definition = _method_load_definition(definition)
     definition["run"] = {
-        "backend": function,
+        "backend": "function",
         "run_fun": run_fun,
         "package_required": package_required,
         "package_loaded": package_loaded,
@@ -25,9 +25,8 @@ def create_ti_method_py(
 
 
 def _method_execution_preproc_function(method):
-    run = method["run"]
-
-    # 后续函数执行也不使用这些预处理的结果
+    # 后续函数执行也不使用这些预处理的结果，直接跳过即可
+    pass
 
 
 def _method_execution_execute_function(
@@ -39,9 +38,13 @@ def _method_execution_execute_function(
         seed,
         preproc_meta
 ):
-    args = []
-    # 函数方法调用
-    trajectory = method["run"]["run_fun"](args)
+    inputs.update({
+        "priors": priors,
+        "parameters": parameters,
+        "verbose": verbose,
+        "seed": seed,
+    })  # 构造参数
+    trajectory = method["run"]["run_fun"](**inputs)  # 执行
     return trajectory
 
 

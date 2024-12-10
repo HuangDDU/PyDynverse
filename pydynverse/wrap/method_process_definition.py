@@ -1,3 +1,4 @@
+import yaml
 import pandas as pd
 from .._logging import logger
 
@@ -82,7 +83,18 @@ def convert_definition(definition_raw):
 
 
 def _method_load_definition(definition):
-    pass
+    # 调用方法函数调用前读取
+    if type(definition)==str:
+        # 提供的yaml文件名字符串，需要读取， 一般是走这个
+        with open(definition, 'r') as file:
+            definition_raw = yaml.safe_load(file)
+            definition = convert_definition(definition_raw)
+        return definition
+    else:
+        # 直接提供的definition
+        return definition
+
+
 
 
 def _method_process_definition(definition, return_function):
