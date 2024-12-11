@@ -1,0 +1,7 @@
+*__pycache__
+output
+
+
+# 测试文件夹
+*.pytest_cache
+tests/plot/img/*
