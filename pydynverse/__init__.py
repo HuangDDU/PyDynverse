@@ -1,16 +1,15 @@
 from ._settings import settings
 from ._logging import logger
 from . import wrap
-from . import plot
 from . import methods
+from . import plot
+from . import dimred
 
 __all__ = [
     "wrap",
     "methods",
     "plot",
     "dimred",
-    "logger",
-    "methods"
 ]
 
 # ASCII艺术字链接：http://patorjk.com/software/taag

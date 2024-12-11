@@ -55,7 +55,24 @@ def add_branch_trajectory(
     milestone_network["to"] = milestone_network["to"].apply(lambda x: mapper[x])
     milestone_network = pd.merge(milestone_network, branches, on="branch_id")
 
-    # TODO: 添加额外的自环
+    # TODO: 添加额外的自环, 对于PAGA非常重要
+    # 对于milstoneA有名称为0的环,则该环扩展为 A -> A-0a -> A-0b -> A
+    new_edge_length = milestone_network["length"].mean()/100  # 额外的边长非常小
+    # for branch_id in milestone_network[milestone_network["from"]==milestone_network["to"]]["branch_id"]: # 替换这种复杂的写法
+    for branch_id in milestone_network.query("`from` == to")["branch_id"]:
+        now_branch_index = milestone_network["branch_id"] == branch_id
+        now_branch_index = now_branch_index[now_branch_index].index.tolist()
+        milestone_id = milestone_network.loc[now_branch_index, "from"].values[0]
+        new_milestone_ids = [f"{milestone_id}-{branch_id}{i}" for i in ['a', 'b']]
+        milestone_network.loc[now_branch_index, "to"] = new_milestone_ids[0] # A -> A-0a
+        mew_milstone_netowrk = pd.DataFrame({
+            "from": new_milestone_ids,
+            "to": [new_milestone_ids[1], milestone_id],
+            "branch_id": "whatever",
+            "length": new_edge_length,
+            "directed": False
+        }) # A-0a -> A-0b -> A
+        milestone_network = pd.concat([milestone_network, mew_milstone_netowrk])
 
     # 直接连接两个branch_progressions与milestone_network, 保留列即可
     progressions = pd.merge(branch_progressions, milestone_network, on="branch_id")[["cell_id", "from", "to", "percentage"]]
