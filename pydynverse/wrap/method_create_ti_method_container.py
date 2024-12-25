@@ -16,10 +16,8 @@ def pull_image_with_progress(image_name, tag="latest", logger_func=None):
     client = docker.from_env()
     try:
         logger_func(f"Try to pull image {image_name}:{tag}...\n")
-        api_client = docker.APIClient(
-            base_url="unix://var/run/docker.sock")  # 使用 APIClient 获取流式输出
-        pull_logs = api_client.pull(
-            repository=image_name, tag=tag, stream=True, decode=True)  # 拉取镜像
+        api_client = docker.APIClient(base_url="unix://var/run/docker.sock")  # 使用 APIClient 获取流式输出
+        pull_logs = api_client.pull(repository=image_name, tag=tag, stream=True, decode=True)  # 拉取镜像
         progress_bars = {}  # 初始化 tqdm 进度条, 存储每个 layer 的进度条
         for log in pull_logs:
             # 拉取日志为 JSON 格式，解析后展示
@@ -144,8 +142,7 @@ def _method_execution_execute_container(method, preproc_meta, tmp_wd):
         detach=True,
     )
 
-    log_list = [log.decode("utf-8").strip()
-                for log in container.logs(stream=True)]
+    log_list = [log.decode("utf-8").strip() for log in container.logs(stream=True)]
     # for log in container.logs(stream=True):
     #     logger.debug(log.decode("utf-8").strip())  # 解码日志并实时打印
     container.wait()  # 当代入口程序执行完成后在执行后续内容

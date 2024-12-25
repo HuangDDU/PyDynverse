@@ -59,7 +59,7 @@ def _method_execute(
                 seed,
                 debug
             )  # 构造DynverseDockerInput对象
-        timings["method_afterpostproc"] = time.time()
+        timings["method_preproc_finish"] = time.time()
 
         # 脚本函数调用/容器执行
         if method["run"].get("backend", "function") == "function":
@@ -79,14 +79,15 @@ def _method_execute(
                 tmp_wd=tmp_wd
             )
         trajectory["adata"] = dataset["adata"]  # 额外添加, 方便后续绘图
-        timings["method_afterpostproc"] < - time.time()
+        timings["method_execute_finish"] = time.time()
 
         # 脚本函数调用/容器执行后处理
         if method["run"].get("backend", "function") == "function":
             _method_execution_postproc_function()
         else:
             _method_execution_postproc_container(preproc_meta=preproc_meta)
-        timings["execution_stop"] = time.time()
+        timings["method_postproc_finish"] = time.time()
+
 
     output = {
         "summary": "",

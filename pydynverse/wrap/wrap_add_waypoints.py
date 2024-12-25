@@ -14,17 +14,13 @@ def select_waypoints(
 
     if resolution is None:
         # 如果没有指定resolution分辨率步长，则根据milestone_network网络的总长度与预期waypoint个数来计算
+        # compute resolution automaticall based on the sum of milestone network length after transformation
         resolution = trajectory["milestone_network"]["length"].apply(lambda x: trafo(x)).sum()/n_waypoints
     if (not recompute) and (not trajectory.get("waypoints", None) is None):
         # 已经计算过了, 不重复计算
         return trajectory["waypoints"]
 
-    waypoint_progressions = trajectory["milestone_network"].copy()
-    waypoint_progressions["percentage"] = waypoint_progressions["length"].apply(lambda x: [i/x for i in np.arange(0, x, resolution)] + [1])  # 按照分辨率为固定步长划分milestone_network的边, 添加到percentage列上
-    waypoint_progressions = waypoint_progressions[["from", "to", "percentage"]]
-    waypoint_progressions = waypoint_progressions.explode("percentage").reset_index(drop=True)  # 展开
-    waypoint_progressions["percentage"] = waypoint_progressions["percentage"].astype("float")
-
+    # percentage list construction and explode
     def waypoint_id_from_progressions_row(row):
         # 从progressions_row的一行综合确定waypoint_id
         match row["percentage"]:
@@ -34,11 +30,17 @@ def select_waypoints(
                 return f"MILESTONE_END_W{row['from']}_{row['to']}"
             case _:
                 return f"W{row.name+1}"  # 这里与R保持一致，W从1开始算
+    waypoint_progressions = trajectory["milestone_network"].copy()
+    waypoint_progressions["percentage"] = waypoint_progressions["length"].apply(lambda x: [i/x for i in np.arange(0, x, resolution)] + [1]) # 按照分辨率为固定步长划分milestone_network的边, 添加到percentage列上
+    waypoint_progressions = waypoint_progressions[["from", "to", "percentage"]]
+    waypoint_progressions = waypoint_progressions.explode("percentage").reset_index(drop=True)  # 展开
+    waypoint_progressions["percentage"] = waypoint_progressions["percentage"].astype("float")
     waypoint_progressions["waypoint_id"] = waypoint_progressions.apply(waypoint_id_from_progressions_row, axis=1)
 
+    # progressions -> percentages
     waypoint_progressions_tmp = waypoint_progressions.copy()
     waypoint_progressions_tmp = waypoint_progressions_tmp.rename(columns={"waypoint_id": "cell_id"})  # 复用之前列改名
-    # 复用milstone的progressions->percentages代码
+    # 复用milestone的progressions->percentages代码
     waypoint_milestone_percentages = convert_progressions_to_milestone_percentages(
         cell_ids="this argument is unnecessary, I can put everything I want in here!",
         milestone_ids=trajectory["milestone_ids"],

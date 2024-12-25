@@ -36,19 +36,16 @@ def definition(
 
     # 必选输入和可选输入
     inputs = d["wrapper"]["input_required"]
-    inputs = inputs.copy() if type(inputs) == list else [
-        inputs]  # 这里后需要修改inputs列表, 使用深拷贝
+    inputs = inputs.copy() if type(inputs) == list else [inputs]  # 这里后需要修改inputs列表, 使用深拷贝
     if "input_optional" in d["wrapper"]:
         input_optional = d["wrapper"]["input_optional"]
-        inputs += input_optional if type(input_optional) == list else [
-            input_optional]
+        inputs += input_optional if type(input_optional) == list else [input_optional]
     # 参数名称
     params = list(d["parameters"]["id"])
 
     # 额外的inputs创建, 包括数据和参数
     input_id_list = inputs + params
-    required_list = [i in d["wrapper"]["input_required"]
-                     for i in input_id_list]
+    required_list = [i in d["wrapper"]["input_required"] for i in input_id_list]
     type_list = []
     for input_id in input_id_list:
         # 输入元素的类型
@@ -58,8 +55,7 @@ def definition(
             type_list.append("parameter")
         else:
             type_list.append("prior_information")
-    inputs_df = pd.DataFrame(
-        {"input_id": input_id_list, "required": required_list, "type": type_list})
+    inputs_df = pd.DataFrame({"input_id": input_id_list, "required": required_list, "type": type_list})
     d["wrapper"]["inputs"] = inputs_df
 
     return d
@@ -84,7 +80,7 @@ def convert_definition(definition_raw):
 
 def _method_load_definition(definition):
     # 调用方法函数调用前读取
-    if type(definition)==str:
+    if type(definition) == str:
         # 提供的yaml文件名字符串，需要读取， 一般是走这个
         with open(definition, 'r') as file:
             definition_raw = yaml.safe_load(file)
@@ -93,8 +89,6 @@ def _method_load_definition(definition):
     else:
         # 直接提供的definition
         return definition
-
-
 
 
 def _method_process_definition(definition, return_function):

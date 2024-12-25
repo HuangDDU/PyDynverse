@@ -8,8 +8,7 @@ def random_time_string(name=None):
     # 获取当前时间并格式化
     current_time = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
     # 生成随机字符串
-    random_chars = ''.join(random.choices(
-        string.ascii_letters + string.digits, k=10))
+    random_chars = ''.join(random.choices(string.ascii_letters + string.digits, k=10))
     # 构建最终的字符串
     if name:
         time_string = f"{current_time}__{name}__{random_chars}"

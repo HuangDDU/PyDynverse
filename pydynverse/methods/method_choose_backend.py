@@ -26,7 +26,7 @@ def method_choose_backend(
     if backend is None:
         backend = settings["backend"]
     if backend is None:
-        # 后句逻辑选择后端
+        # 按照选择后端
         if (not function_name is None) and (container_id is None):
             # 提供了执行函数, 而没有提供docker镜像名
             backend = "function"

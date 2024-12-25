@@ -134,6 +134,7 @@ def calculate_geodesic_distances_(
             pass
 
         distances = calculate_distance(pct_mat, pct_mat.loc[wp_cells+tent], method="manhattan")
+        # TODO: 这里calculate_distance可以直接用sklearn的pairwise_distances代替
         distances = distances.reset_index().melt(id_vars="from", var_name="to",  value_name="length")  # 宽数据转化为长数据
         distances = distances[~(distances["from"] == distances["to"])]
         return distances

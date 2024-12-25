@@ -58,7 +58,7 @@ def test_plot_dimred():
 
     # 绘图
     pdv.plot.plot_dimred(trajectory, grouping=grouping, dimred=space)
-    plt.savefig("img/test_plot_dimred.png")
+    plt.savefig("/home/huang/PyCode/scRNA/PyDynverse/PyDynverse/tests/plot/img/test_plot_dimred.png")
 
 
 if __name__ == "__main__":

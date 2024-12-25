@@ -43,7 +43,7 @@ def add_trajectory(
        
 
     if progressions is None:
-        # milestone_percentages -> progressions, addtrajectory测试用例执行这里
+        # milestone_percentages -> progressions, add_trajectory测试用例执行这里
         check_milestone_percentages(cell_ids, milestone_ids, milestone_percentages)
         progressions = convert_milestone_percentages_to_progressions(cell_ids, milestone_ids, milestone_network, milestone_percentages)
         progressions = check_progressions(cell_ids, milestone_ids, milestone_network, progressions)
