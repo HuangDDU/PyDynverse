@@ -1,7 +1,7 @@
 import os
 
 from .method_choose_backend import method_choose_backend
-from .function.ti_paga_function import ti_paga_function
+from .function import ti_paga_function
 
 
 def ti_paga(

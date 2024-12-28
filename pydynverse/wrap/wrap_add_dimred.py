@@ -49,7 +49,7 @@ def is_wrapper_with_dimred(dataset):
         return False
 
 
-def get_dimred(dataset,
+def get_dimred(dataset: dict,
                dimred,
                expression_source="expression",
                return_other_dimreds=False):
@@ -59,20 +59,20 @@ def get_dimred(dataset,
         # 传入的dimred为DataFrame
         dimred = dimred
         extra_out = {}
-        
+
     elif is_wrapper_with_dimred(dataset):
         dimred = dataset["dimred"]
         extra_out = {}
         if return_other_dimreds:
             # 里程碑
-            if dataset["dimred_milestones"]:
+            if dataset.get("dimred_milestones", None) is not None:
                 extra_out["dimred_milestones"] = dataset["dimred_milestones"]
             # 分段过程
-            if (not (dataset["dimred_segment_progressions"] is None)) and (not (dataset["dimred_segment_points"] is None)):
+            if (dataset.get("dimred_segment_progressions", None) is not None) and (dataset.get("dimred_segment_points", None) is not None):
                 extra_out["dimred_segment_progressions"] = dataset["dimred_segment_progressions"]
                 extra_out["dimred_segment_points"] = dataset["dimred_segment_points"]
-    
-    dimred.columns = [f"comp_{i+1}" for i in range(dimred.shape[1])] # 这里的降维维度序号从1开始
+
+    dimred.columns = [f"comp_{i+1}" for i in range(dimred.shape[1])]  # 这里的降维维度序号从1开始
 
     dimred = dimred.loc[dataset["cell_ids"]]  # 这步对齐是没有必要的
 
