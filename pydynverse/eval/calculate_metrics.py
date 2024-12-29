@@ -1,0 +1,33 @@
+import networkx as nx
+# from .__init__ import metrics # 交叉重复导入会报错
+from ..wrap import simplify_trajectory
+
+from .metric_isomorphic import calc_isomorphic
+from .metric_flip import calculate_edge_flip
+from .metric_him import calculate_him
+
+
+def calculate_metrics(
+    dataset,
+    model,
+    # metrics=metrics["metric_id"],
+    metrics=["isomorphic"],
+):
+    # 一堆指标检查先不管
+    summary_dict = {}
+    # 简化轨迹
+    dataset = simplify_trajectory(dataset)
+    if model is not None:
+        model = simplify_trajectory(model)
+
+    # TODO: 其他指标
+    net1 = model["milestone_network"]
+    net2 = dataset["milestone_network"]
+    if "isomorphic" in metrics:
+        # 这里与dynverse不同，也用函数实现
+        summary_dict["isomorphic"] = calc_isomorphic(net1, net2)
+    if "edge_flip" in metrics:
+        summary_dict["edge_flip"] = calculate_edge_flip(net1, net2)
+    if "him" in metrics:
+        summary_dict["him"] = calculate_him(net1, net2)
+    return summary_dict

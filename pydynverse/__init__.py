@@ -4,6 +4,7 @@ from . import wrap
 from . import methods
 from . import plot
 from . import dimred
+from . import eval
 
 __all__ = [
     "wrap",
