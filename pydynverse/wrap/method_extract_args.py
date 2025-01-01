@@ -33,7 +33,7 @@ def _method_extract_priors(
         # 如果必要的先验输入不完全,则报错
         missing_priors = required_prior_ids_set - priors_key_set
         raise Exception(f"""\n
-                ! Prior information {','.join(missing_priors)} is missing from dataset {dataset['id']} but is required by the method. \n
+                ! Prior information {' ,'.join(missing_priors)} is missing from dataset {dataset['id']} but is required by the method. \n
                 -> If known, you can add this prior information using add_prior_information(dataset, {' ,'.join([str(i)+' = <prior>' for i in missing_priors])}). \n
                 -> Otherwise, this method cannot be used.
                      """)
