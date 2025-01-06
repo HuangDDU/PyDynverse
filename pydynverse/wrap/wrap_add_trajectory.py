@@ -27,7 +27,7 @@ def add_trajectory(
 
     # 延迟承诺区域
     if divergence_regions is None:
-        divergence_regions = None
+        divergence_regions = pd.DataFrame(columns=["divergence_id", "milestone_id", "is_start"],)
     divergence_regions = check_divergence_regions(milestone_ids, divergence_regions)
 
     # 检测milestone percentages和progressions

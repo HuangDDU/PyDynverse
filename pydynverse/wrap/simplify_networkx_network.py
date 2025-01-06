@@ -17,7 +17,11 @@ def simplify_networkx_network(
 
     # 重新命名确保不混乱
     gr = nx.relabel_nodes(gr, {name: f"#M#{name}" for name in gr.nodes})
-    force_keep = [f"#M#{name}" for name in force_keep]
+    if edge_points is not None:
+        edge_points["from"] = edge_points["from"].apply(lambda x: f"#M#{x}")
+        edge_points["to"] = edge_points["to"].apply(lambda x: f"#M#{x}")
+    if force_keep is not None:
+        force_keep = [f"#M#{name}" for name in force_keep]
 
     # 边权没有则手动添加为1
     attribute_keys = list(gr.edges(data=True))[0][2].keys()  # 提取第一个边的属性键名， 所有边的属性键名一致
@@ -39,29 +43,38 @@ def simplify_networkx_network(
     simplified_graphs = []
     for connected_component in connected_component_list:
         subgr = gr.subgraph(connected_component).copy()
-        simplified_subgraph = simplify_subgraph(subgr, is_directed, force_keep)
+        simplified_subgraph = simplify_subgraph(subgr, is_directed, force_keep, edge_points)
         simplified_graphs.append(simplified_subgraph)
 
     # 合并图，这里直接合并
     out_gr = nx.compose_all([i["subgr"] for i in simplified_graphs])
+    seps = [i["sub_edge_points"] for i in simplified_graphs]
+
     out_gr = nx.relabel_nodes(out_gr, {name: name[3:] for name in out_gr.nodes})  # 名字改回去
 
     if edge_points is None:
-
         return out_gr  # 暂时只输出简化后的networkx图结构
     else:
-        sep = None
+        seps = pd.concat(seps)
+        seps["from"] = seps["from"].apply(lambda x: x[3:])
+        seps["to"] = seps["to"].apply(lambda x: x[3:])
         return {
             "gr": out_gr,
-            "sep": sep
+            "edge_points": seps
         }
 
 
-def simplify_subgraph(subgr, is_directed, force_keep):
+def simplify_subgraph(subgr, is_directed, force_keep, edge_points):
     # NOTE: 这里是简化的核心函数
     node_list = list(subgr.nodes)
     keep_v = simplify_determine_nodes_to_keep(subgr, is_directed, force_keep)  # 决定保留哪些节点True， 过滤哪些节点False
-    sub_edge_points = None  # TODO:
+    if edge_points is not None:
+        edge = pd.DataFrame(data=subgr.edges(), columns=["from", "to"])
+        edge_rev = edge.rename(columns={"from": "to", "to": "from"}).drop_duplicates()
+        edge_bothdir = pd.concat([edge, edge_rev], axis=0)  # 双向边添加，与前面的无向图边反转一致
+        sub_edge_points = pd.merge(edge_points, edge_bothdir, on=["from", "to"])
+    else:
+        sub_edge_points = None
     keep_v = keep_v  # TODO:
     num_vs = len(subgr.nodes)
     neighs = simplify_get_neighbours(subgr, is_directed)
@@ -104,7 +117,7 @@ def simplify_subgraph(subgr, is_directed, force_keep):
             right_path["to"] = [node_list[i] for i in right_path["to"]]
 
             if i == j:
-                # TODO: 自环等
+                # TODO: 自环等操作
                 pass
             else:
                 rplcd = simplify_replace_edges(subgr, sub_edge_points, i, j, path=pd.concat([left_path, right_path]), is_directed=is_directed)
@@ -197,20 +210,63 @@ def simplify_get_next(neighs, v_rem, is_directed, left=False, prev=None):
         neighs["neighs"].remove(prev)
 
 
-def simplify_get_edge_points_on_path():
-    # TODO: 对于边上点的处理
-    pass
+def anti_join(df_left, df_right, on=None):
+    # 反连接，只在df_left中出现的行，模拟 dplyr 中的 anti_join 操作
+    merged_df = df_left.merge(df_right, on=on, how="left", indicator=True, suffixes=("", "_y"))
+    return merged_df[merged_df["_merge"] == "left_only"].drop(columns="_merge")[df_left.columns.tolist()]
+
+
+def simplify_get_edge_points_on_path(sub_edge_points, path):
+    # 对于边上点的处理
+    rev_path = path.rename({"from": "to", "to": "from"})[["from", "to"]]
+
+    # 拼接反转后的边和sub_edge_point
+    sepaj = anti_join(sub_edge_points, path, on=["from", "to"])
+    tofilp = pd.merge(sepaj, rev_path, on=["from", "to"])
+
+    tofilp_tmp = tofilp.rename({"from": "to", "to": "from"})
+    tofilp_tmp["percentage"] = 1 - tofilp_tmp["percentage"]
+    both_sub_edge_points = pd.concat([sub_edge_points, tofilp_tmp])
+    on_path = pd.merge(both_sub_edge_points, path, on=["from", "to"])
+
+    not_on_path = anti_join(sepaj, rev_path, on=["from", "to"])
+
+    return {
+        "on_path": on_path,
+        "not_on_path": not_on_path
+    }
 
 
 def simplify_replace_edges(subgr: nx.Graph | nx.DiGraph, sub_edge_points, i, j, path, is_directed):
     # 添加替换旧边的新边
     node_list = list(subgr.nodes)
+
+    swap = (not is_directed) and (i > j)
+    if swap:
+        i, j = j, i
+
     path_len = path["weight"].sum()
     subgr.add_edge(node_list[i], node_list[j], weight=path_len, directed=is_directed)  # 添加新边
     if sub_edge_points is not None:
-        # TODO:边上的点处理
-        simplify_get_edge_points_on_path()
-        sub_edge_points = sub_edge_points
+        # 边上的点处理
+        path["cs"] = path["weight"].cumsum() - path["weight"]  # 从dataframe表头开始的累计边长
+        out = simplify_get_edge_points_on_path(sub_edge_points, path)
+        processed_edge_points = out["on_path"]
+        processed_edge_points["from"] = node_list[i]
+        processed_edge_points["to"] = node_list[j]
+        if not path_len == 0:
+            # 关键部分，修改percentage
+            cs = processed_edge_points["cs"]
+            percentage = processed_edge_points["percentage"]
+            weight = processed_edge_points["weight"]
+            processed_edge_points["percentage"] = (cs + percentage * weight) / path_len
+            processed_edge_points = processed_edge_points[["id", "from", "to", "percentage"]]
+        else:
+            processed_edge_points["percentage"] = 0.5
+        if swap:
+            processed_edge_points["percentage"] = 1 - processed_edge_points["percentage"]
+
+        sub_edge_points = pd.concat([out["not_on_path"], processed_edge_points])
     return {
         "subgr": subgr,
         "sub_edge_points": sub_edge_points

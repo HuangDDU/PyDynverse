@@ -21,6 +21,7 @@ def calculate_metrics(
         model = simplify_trajectory(model)
 
     # TODO: 其他指标
+    # milestone相关指标
     net1 = model["milestone_network"]
     net2 = dataset["milestone_network"]
     if "isomorphic" in metrics:
@@ -30,4 +31,6 @@ def calculate_metrics(
         summary_dict["edge_flip"] = calculate_edge_flip(net1, net2)
     if "him" in metrics:
         summary_dict["him"] = calculate_him(net1, net2)
+
+    # 其他指标
     return summary_dict
