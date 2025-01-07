@@ -7,7 +7,8 @@ from .add_milestone_coloring import add_milestone_coloring
 from .add_cell_coloring import add_cell_coloring
 from .project_waypoints import project_waypoints_coloured
 
-from ..wrap.wrap_add_dimred import get_dimred
+from ..wrap.wrap_add_dimred import get_dimred, is_wrapper_with_dimred
+from ..dimred import dimred_mds, dimred_tsne
 
 
 def plot_dimred(
@@ -33,8 +34,13 @@ def plot_dimred(
         trajectory_projection_sd=None,
         color_trajectory=None
 ):
-    # TODO: 提取里程碑
+    # 提取里程碑
     milestones = check_milestones(trajectory, milestones=milestones, milestone_percentages=milestone_percentages)
+
+    # 提取降维结果
+    if (dimred is None) and (not is_wrapper_with_dimred(trajectory)):
+        # dimred = dimred_mds
+        dimred = dimred_tsne # 默认使用tsne降维
     dimred, dimred_extra = get_dimred(
         dataset=trajectory,
         dimred=dimred,
@@ -42,15 +48,21 @@ def plot_dimred(
         return_other_dimreds=True
     )  # 提取降维结果, 这里与R不同, 同时返回dimred, dimred_extra
 
-    # TODO: 提取细胞位置, 基于降维结果与里程碑百分比
+    #  提取细胞位置, 基于降维结果与里程碑百分比
     cell_positions = dimred
     cell_positions["cell_id"] = cell_positions.index
+    # merge链接操作降维结果与里程碑百分比调整细胞位置
+    tmp_milestone_percentages = trajectory["milestone_percentages"]
+    idx = tmp_milestone_percentages.groupby("cell_id")["percentage"].idxmax()
+    tmp_milestone_percentages = tmp_milestone_percentages.loc[idx, ["cell_id", "milestone_id"]]
+    cell_positions = pd.merge(cell_positions, tmp_milestone_percentages, on="cell_id")
 
     # TODO:添加里程碑颜色
-    if (plot_milestone_network or plot_trajectory) and color_cells == "milestone":
-        if not "color" in milestones:
-            milestones = add_milestone_coloring(milestones, color_milestones=color_milestones)
+    # if (plot_milestone_network or plot_trajectory) and color_cells == "milestone":
+    #     if not "color" in milestones:
+    #         milestones = add_milestone_coloring(milestones, color_milestones=color_milestones)
 
+    # 最主要部分, 添加细胞颜色
     cell_coloring_output = add_cell_coloring(
         cell_positions=cell_positions,
         trajectory=trajectory,
@@ -68,14 +80,20 @@ def plot_dimred(
     # TODO: 没有颜色则计算细胞密度
 
     # 绘制细胞
+    color_cells = cell_coloring_output["color_cells"]
     adata = trajectory["adata"]
-    adata.obs["grouping"] = grouping
-    adata.uns["grouping_colors"] = cell_coloring_output["color_dict"]
     adata.obsm["dimred"] = dimred.values
-    ax = sc.pl.embedding(adata, basis="dimred", color="grouping", show=False)  # 后需要在这个画板上继续添加内容
+    if color_cells == "grouping":
+        adata.obs["grouping"] = grouping
+        adata.uns["grouping_colors"] = cell_coloring_output["color_dict"]
+        ax = sc.pl.embedding(adata, basis="dimred", color="grouping", show=False)  # 后需要在这个画板上继续添加内容
+    elif color_cells == "milestone":
+        color_list = cell_coloring_output["color_scale"][adata.obs.index].to_list()
+        adata.obs["cell_id"] = adata.obs.index.astype("category")
+        adata.uns["cell_id_colors"] = dict(zip(adata.obs.index, color_list))
+        ax = sc.pl.embedding(adata, basis="dimred", color="cell_id", show=False, legend_loc=None)
 
     # TODO: 绘制里程碑，箭头等
-
     # 绘制轨迹
     if plot_trajectory:
         dimred_segment_progressions = dimred_extra.get("dimred_segment_progressions", None)

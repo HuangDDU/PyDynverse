@@ -1,5 +1,6 @@
 import numpy as np
 import pandas as pd
+import inspect
 
 from .wrap_add_expression import get_expression
 
@@ -55,11 +56,14 @@ def get_dimred(dataset: dict,
                return_other_dimreds=False):
     # 获得降维结果
     # 执行quickstart里直接来到这里，跳过了R代码中的一堆判断
-    if type(dimred) is pd.DataFrame:
+    if inspect.isfunction(dimred):
+        expression = get_expression(dataset, expression_source)
+        dimred = dimred(expression)
+        dimred.index = dataset["cell_ids"]
+    if isinstance(dimred, pd.DataFrame):
         # 传入的dimred为DataFrame
         dimred = dimred
         extra_out = {}
-
     elif is_wrapper_with_dimred(dataset):
         dimred = dataset["dimred"]
         extra_out = {}

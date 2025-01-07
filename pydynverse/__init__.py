@@ -1,5 +1,6 @@
 from ._settings import settings
 from ._logging import logger
+from . import data
 from . import wrap
 from . import methods
 from . import plot
@@ -7,10 +8,12 @@ from . import dimred
 from . import eval
 
 __all__ = [
+    "data",
     "wrap",
     "methods",
     "plot",
     "dimred",
+    "eval"
 ]
 
 # ASCII艺术字链接：http://patorjk.com/software/taag

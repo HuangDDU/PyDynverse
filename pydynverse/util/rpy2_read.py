@@ -6,6 +6,7 @@ from rpy2.robjects import pandas2ri
 
 
 from scipy.sparse import csr_matrix, csc_matrix
+import numpy as np
 import pandas as pd
 
 
@@ -19,24 +20,25 @@ def convert_sparse(obj):
         dim = obj.do_slot("Dim")
 
         # csr = csr_matrix((x, i, p), shape = dim[::-1]) #  这样做的csr后续还得转置成csc，麻烦，不如直接做
-        csc = csc_matrix((x, i, p), shape = dim)
-        
+        csc = csc_matrix((x, i, p), shape=dim)
+
         index = ro.r["rownames"](obj)
         columns = ro.r["colnames"](obj)
-        
+
         if isinstance(index, rinterface.NULLType):
             index = None
         if isinstance(columns, rinterface.NULLType):
             columns = None
-        
+
         # return pd.DataFrame.sparse.from_spmatrix(csr.transpose(), index = index, columns = columns)
         # 此处返回字典格式
         return {
-            "csc" : csc,
+            "csc": csc,
             "cell_ids": index,
             "feature_ids": columns,
         }
     return obj
+
 
 @ro.conversion.rpy2py.register(rinterface.ListSexpVector)
 def convert_list(obj):
@@ -44,14 +46,14 @@ def convert_list(obj):
     if not isinstance(obj, rinterface.NULLType) and len(obj) > 0:
         # check if named list
         if not isinstance(obj.names, rinterface.NULLType) and len(obj) == len(obj.names):
-                x = {
-                        name:ro.conversion.rpy2py(obj[i]) for i, name in enumerate(obj.names)
-                }
+            x = {
+                name: ro.conversion.rpy2py(obj[i]) for i, name in enumerate(obj.names)
+            }
         else:
-                x = [
-                        ro.conversion.rpy2py(obj[i]) for i in range(len(obj))
-                ]
-        
+            x = [
+                ro.conversion.rpy2py(obj[i]) for i in range(len(obj))
+            ]
+
         # check if dataframe
         if "data.frame" in obj.rclass:
             x = pandas2ri.rpy2py_dataframe(ro.vectors.DataFrame(obj))
@@ -82,7 +84,19 @@ def convert_double(obj):
     if len(obj) == 1:
         return float(obj[0])
     else:
-        return [float(x) for x in obj]
+        if "matrix" in obj.rclass:
+            cell_ids = ro.r["rownames"](obj)
+            feature_ids = ro.r["colnames"](obj)
+            matrix = np.array([float(x) for x in obj]).reshape((len(cell_ids), len(feature_ids)))
+            matrix = csc_matrix(matrix) # 转化为稀疏矩阵
+            # return {
+            #     "matrix":  matrix,
+            #     "cell_ids": cell_ids,
+            #     "feature_ids": feature_ids
+            # }
+            return matrix
+        else:
+            return [float(x) for x in obj]
 
 
 @ro.conversion.rpy2py.register(rinterface.BoolSexpVector)
@@ -98,9 +112,11 @@ def convert_null(obj):
     return None
 
 # recursively check inside lists and dicts for items that were not converted into python objects
-def check_conversion_rpy2py(obj, position = "/", verbose = False):
+
+
+def check_conversion_rpy2py(obj, position="/", verbose=False):
     if verbose:
-            print("✔ " + position)
+        print("✔ " + position)
     if isinstance(obj, dict):
         for name, obj2 in obj.items():
             check_conversion_rpy2py(obj2, position + name + "/")

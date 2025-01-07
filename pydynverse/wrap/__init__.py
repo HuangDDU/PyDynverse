@@ -12,6 +12,7 @@ from .wrap_add_branch_trajectory import add_branch_trajectory
 from .wrap_add_linear_trajectory import add_linear_trajectory
 from .simplify_trajectory import simplify_trajectory
 from .simplify_networkx_network import simplify_networkx_network
+from .calculate_trajectory_dimred import calculate_trajectory_dimred
 
 from .method_create_ti_method_py import create_ti_method_py
 
@@ -31,5 +32,6 @@ __all__ = [
     "select_waypoints",
     "add_branch_trajectory",
     "add_linear_trajectory",
-    "create_ti_method_py"
+    "create_ti_method_py",
+    "calculate_trajectory_dimred",
 ]
