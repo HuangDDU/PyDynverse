@@ -52,7 +52,7 @@ def add_cell_coloring(
         if milestones is None:
             milestones = pd.DataFrame([milestone_id_list], columns=["milestone_id"], index=milestone_id_list)
         if "color" not in milestones.columns:
-            # 函数传参传入了里程碑颜色
+            # 函数传参传入了没有里程碑颜色
             milestones = add_milestone_coloring(milestone_id_list, color_milestones=color_milestones)  # 添加里程碑颜色
         milestone_colors = milestones["color"].apply((lambda x: pd.Series(mcolors.to_rgb(x))))  # 16进制转化为rgb，方便颜色混合
         cell_colors = milestone_percentages.groupby("cell_id").apply(lambda x: mix_colors(x["milestone_id"], x["percentage"], milestone_colors))

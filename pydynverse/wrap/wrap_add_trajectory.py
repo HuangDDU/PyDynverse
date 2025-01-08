@@ -20,7 +20,7 @@ def add_trajectory(
 
     if milestone_ids is None:
         # 如果milestone_ids没有给定的话, 从milestone_network的from和to中来唯一获得
-        milestone_ids = list(set(milestone_network["from"]) | set(milestone_network["to"]))
+        milestone_ids = sorted(list(set(milestone_network["from"]) | set(milestone_network["to"])))
 
     # 里程碑网络结构
     milestone_network = check_milestone_network(milestone_ids, milestone_network, allow_self_loops)

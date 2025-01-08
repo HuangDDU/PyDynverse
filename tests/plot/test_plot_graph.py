@@ -4,6 +4,7 @@ import pydynverse as pdv
 import matplotlib.pyplot as plt
 from .test_plot_dimred import get_test_wrap_data
 
+
 def test_plot_graph():
     trajectory, grouping, space = get_test_wrap_data()
     pdv.plot.plot_graph(trajectory)

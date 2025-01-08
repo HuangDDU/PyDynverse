@@ -1,4 +1,5 @@
 import matplotlib.pyplot as plt
+import pandas as pd
 import networkx as nx
 import scanpy as sc
 
@@ -25,18 +26,37 @@ def plot_graph(trajectory, color_cells="milestone", color_milestones=None):
     milestone_positions = dimred_traj["milestone_positions"]
 
     # 绘制细胞
-    color_cells = cell_coloring_output["color_cells"]
     adata = trajectory["adata"]
-    adata.obsm["dimred"] = cell_positions.values
+    cell_id_list = list(adata.obs.index)
+    adata.obsm["dimred"] = cell_positions.loc[cell_id_list].values
+    color_cells = cell_coloring_output["color_cells"]
     if color_cells == "milestone":
         # 先绘制网络
-        ax = plt.subplots(1,1)[1]
+        ax = plt.subplots(1, 1)[1]
         G = dimred_traj["gr"]
         pos = dimred_traj["pos"]
-        nx.draw(G, pos, with_labels=True, node_color = [milestones.loc[node, "color"] for node in G.nodes], edge_color="gray", width=10)
+        milestone_size = 300
+        nx.draw(
+            G,
+            pos,
+            with_labels=True,
+            node_color=[milestones.loc[node, "color"] for node in G.nodes],
+            node_size=milestone_size,
+            width=10,
+            edge_color="gray",
+        )
         # 再绘制细胞
-        color_list = cell_coloring_output["color_scale"][adata.obs.index].to_list()
-        adata.obs["cell_id"] = adata.obs.index.astype("category")
-        adata.uns["cell_id_colors"] = dict(zip(adata.obs.index, color_list))
-        ax = sc.pl.embedding(adata, basis="dimred", color="cell_id", show=False, legend_loc=None, size=1000, ax=ax)
-        
+        color_list = cell_coloring_output["color_scale"][cell_id_list].to_list()
+        adata.obs["cell_id"] = pd.Categorical(cell_id_list, categories=cell_id_list)
+        adata.uns["cell_id_colors"] = color_list
+        cell_size = milestone_size
+        ax = sc.pl.embedding(
+            adata,
+            basis="dimred",
+            color="cell_id",
+            show=False,
+            legend_loc=None,
+            size=cell_size,
+            title="",
+            ax=ax
+        )

@@ -1,6 +1,8 @@
 import pandas as pd
 import networkx as nx
 
+from sklearn.preprocessing import StandardScaler
+
 
 def calculate_trajectory_dimred(trajectory, adjust_weights=False):
     # 一堆assert判断参数有效性，先跳过
@@ -35,8 +37,12 @@ def calculate_trajectory_dimred(trajectory, adjust_weights=False):
     # 使用networkx包进行milestone network的节点布局
     gr = nx.from_pandas_edgelist(structure, source="from", target="to", edge_attr=True, create_using=nx.DiGraph if is_directed else nx.Graph)
     # pos = nx.kamada_kawai_layout(gr)
-    pos = nx.spring_layout(gr)
-    layout = pd.DataFrame(pos).T  # TODO: 布局可能还需要Z归一化
+    # pos = nx.spring_layout(gr, seed=0)  # dict node:position
+    pos = nx.nx_agraph.graphviz_layout(gr, prog="dot") # graphviz的dot有向无环图布局更加合适
+    layout = pd.DataFrame(pos).T  # dataframe
+    # 是否Z归一化差距不大
+    # layout = pd.DataFrame(StandardScaler().fit_transform(layout), columns=layout.columns, index=layout.index)  # 布局Z归一化
+    # pos = dict(zip(layout.index, layout.values))
 
     # 样本的降维投影策略
     def mix_dimred(milid, milpct):
