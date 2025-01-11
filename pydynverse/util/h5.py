@@ -103,7 +103,8 @@ class DynverseDockerOutput():
         self.milestone_network = pd.DataFrame(self.milestone_network)
         self.milestone_percentages = pd.DataFrame(self.milestone_percentages)
         self.progressions = pd.DataFrame(self.progressions)
-        self.divergence_regions = None if (len(self.divergence_regions) == 0) else pd.DataFrame(self.divergence_regions)
+        # self.divergence_regions = None if (len(self.divergence_regions) == 0) else pd.DataFrame(self.divergence_regions)
+        self.divergence_regions = pd.DataFrame(columns=["divergence_id", "milestone_id", "is_start"]) if (len(self.divergence_regions) == 0) else pd.DataFrame(self.divergence_regions)
         self.dimred = pd.DataFrame(self.dimred, index=self.cell_ids)
         self.dimred_segment_progressions = pd.DataFrame(
             output_json["dimred_segment_progressions"])
