@@ -44,7 +44,8 @@ def plot_graph(trajectory, color_cells="milestone", color_milestones=None):
             node_size=milestone_size,
             width=10,
             edge_color="gray",
-        )
+        ) # TODO: 边的样式更改。
+        
         # 再绘制细胞
         color_list = cell_coloring_output["color_scale"][cell_id_list].to_list()
         adata.obs["cell_id"] = pd.Categorical(cell_id_list, categories=cell_id_list)

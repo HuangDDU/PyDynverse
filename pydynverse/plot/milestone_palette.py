@@ -1,6 +1,8 @@
 import matplotlib.colors as mcolors
 import seaborn as sns
 
+from .._settings import settings
+
 
 # RGB转化为16进制
 def rgb2hex(palette):
@@ -10,7 +12,7 @@ def rgb2hex(palette):
 def milestone_palette(name, n):
     if name == "auto":
         # 默认使用Set调色板
-        palette = sns.color_palette("Set3")[:n]
+        palette = sns.color_palette(settings.sns_palette)[:n]
     else:
         palette = sns.color_palette(name)[:n]
 

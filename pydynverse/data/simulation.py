@@ -12,12 +12,28 @@ def load_simulation_data(data_filename="synthetic/dyntoy/bifurcating_1.rds", dat
     # 这里数据读取有点错乱
     dataset = ro.r(r_script)
 
-    # 额外操作
-    dataset["feature_ids"] = dataset["feature_info"]["feature_id"].tolist()
     # 添加额外的adata数据
-    adata = ad.AnnData(dataset["counts"])
-    adata.layers["counts"],  adata.layers["expression"] = dataset["counts"], dataset["expression"]
+    # adata = ad.AnnData(dataset["counts"])
+    # adata.layers["counts"],  adata.layers["expression"] = dataset["counts"], dataset["expression"]
+    # 优先添加 expression
+    layers = {}
+    if "expression" in dataset:
+        X = dataset["expression"]
+        layers["expression"] = dataset["expression"]
+    if "count" in dataset:
+        X = dataset["count"]
+        layers["count"] = dataset["count"]
+    adata = ad.AnnData(X)
+    adata.layers = layers
     adata.obs.index = dataset["cell_ids"]
-    adata.var.index = dataset["feature_ids"]
+
+    # 额外操作
+    feature_info = dataset.get("feature_info")
+    if feature_info is not None:
+        if "feature_id" in feature_info.columns:
+            dataset["feature_ids"] = dataset["feature_info"]["feature_id"].tolist() # synthetic/dyntoy/bifurcating_1.rds
+        if "f" in feature_info.columns:
+            dataset["feature_ids"] = dataset["feature_info"]["f"].tolist() # fibroblast-reprogramming_treutlein.rds
+        adata.var.index = dataset["feature_ids"]
     dataset["adata"] = adata
     return dataset

@@ -5,6 +5,8 @@ class PyDynverseConfig:
     def __init__(self):
         self.backend = None
 
+        self.sns_palette = "Set3"
+
     def __getitem__(self, key):
         if hasattr(self, key):
             return getattr(self, key)

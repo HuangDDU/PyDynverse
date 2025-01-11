@@ -8,12 +8,12 @@ from .add_cell_coloring import add_cell_coloring
 from .project_waypoints import project_waypoints_coloured
 
 from ..wrap.wrap_add_dimred import get_dimred, is_wrapper_with_dimred
-from ..dimred import dimred_mds, dimred_tsne
+from ..dimred import dimred_mds, dimred_tsne, dimred_iosmap
 
 
 def plot_dimred(
         trajectory,
-        color_cells="auto",
+        color_cells="milestone",
         dimred=None,
         plot_trajectory=True,
         plot_milestone_network=True,
@@ -27,7 +27,7 @@ def plot_dimred(
         milestones=None,
         milestone_percentages=None,
         pseudotime=None,
-        expression_source="expression",
+        expression_source="counts",
         arrow=None,
         # 投影轨迹的相关参数
         waypoints=None,
@@ -39,8 +39,10 @@ def plot_dimred(
 
     # 提取降维结果
     if (dimred is None) and (not is_wrapper_with_dimred(trajectory)):
-        # dimred = dimred_mds
-        dimred = dimred_tsne # 默认使用tsne降维
+        # Note: test dimred method for simulation data
+        dimred = dimred_mds
+        # dimred = dimred_tsne
+        # dimred = dimred_iosmap
     dimred, dimred_extra = get_dimred(
         dataset=trajectory,
         dimred=dimred,
@@ -57,10 +59,9 @@ def plot_dimred(
     tmp_milestone_percentages = tmp_milestone_percentages.loc[idx, ["cell_id", "milestone_id"]]
     cell_positions = pd.merge(cell_positions, tmp_milestone_percentages, on="cell_id")
 
-    # TODO:添加里程碑颜色
-    # if (plot_milestone_network or plot_trajectory) and color_cells == "milestone":
-    #     if not "color" in milestones:
-    #         milestones = add_milestone_coloring(milestones, color_milestones=color_milestones)
+    # 添加里程碑颜色
+    if (plot_milestone_network or plot_trajectory) and color_cells == "milestone":
+        milestones = add_milestone_coloring(trajectory["milestone_ids"], color_milestones=color_milestones)
 
     # 最主要部分, 添加细胞颜色
     cell_coloring_output = add_cell_coloring(
@@ -88,9 +89,10 @@ def plot_dimred(
         adata.uns["grouping_colors"] = cell_coloring_output["color_dict"]
         ax = sc.pl.embedding(adata, basis="dimred", color="grouping", show=False)  # 后需要在这个画板上继续添加内容
     elif color_cells == "milestone":
-        color_list = cell_coloring_output["color_scale"][adata.obs.index].to_list()
-        adata.obs["cell_id"] = adata.obs.index.astype("category")
-        adata.uns["cell_id_colors"] = dict(zip(adata.obs.index, color_list))
+        cell_id_list = adata.obs.index
+        color_list = cell_coloring_output["color_scale"][cell_id_list].to_list()
+        adata.obs["cell_id"] = pd.Categorical(cell_id_list, categories=cell_id_list)
+        adata.uns["cell_id_colors"] = color_list
         ax = sc.pl.embedding(adata, basis="dimred", color="cell_id", show=False, legend_loc=None)
 
     # TODO: 绘制里程碑，箭头等
@@ -126,6 +128,7 @@ def plot_dimred(
             ax.plot(wp_segments_g["comp_1"], wp_segments_g["comp_2"], c="black", linewidth=size_transitions)
 
         # 绘制轨迹上的箭头
+        # TODO: 箭头大小调整
         if trajectory["milestone_network"]["directed"].any():
             def get_arrow_df(group):
                 group = group.sort_values(by="percentage")

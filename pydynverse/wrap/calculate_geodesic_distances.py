@@ -91,6 +91,7 @@ def calculate_geodesic_distances_(
 
     # 合并发散区域
     divergence_regions = pd.concat([divergence_regions, extra_divergences]).reset_index(drop=True)
+    divergence_regions["is_start"] = divergence_regions["is_start"].astype(bool) # 确保is_start为bool类型
     divergence_ids = divergence_regions["divergence_id"].unique()
 
     # 准备使用NetworkX, 构造相关数据, 从DataFrame开始构造
