@@ -1,6 +1,7 @@
 import numpy as np
 import pandas as pd
 import networkx as nx
+
 # from .wrap_add_trajectory import is_wrapper_with_trajectory
 # from .wrap_add_waypoints import is_wrapper_with_waypoints
 from ..util import calculate_distance
@@ -10,7 +11,9 @@ def calculate_geodesic_distances(
     trajectory,
     waypoint_cells=None,
     waypoint_milestone_percentages=None,
-    directed=False
+    directed=False,
+    graph_package="igraph",
+    merge_mode="all_pair"
 ):
     # assert is_wrapper_with_trajectory(trajectory)
 
@@ -24,7 +27,9 @@ def calculate_geodesic_distances(
         divergence_regions=trajectory["divergence_regions"],
         waypoint_cells=waypoint_cells,
         waypoint_milestone_percentages=waypoint_milestone_percentages,
-        directed=directed
+        directed=directed,
+        graph_package=graph_package,
+        merge_mode=merge_mode
     )
 
 
@@ -36,7 +41,9 @@ def calculate_geodesic_distances_(
     divergence_regions,
     waypoint_cells=None,
     waypoint_milestone_percentages=None,
-    directed=None
+    directed=None,
+    graph_package="igraph",
+    merge_mode="all_pair"  # 仅当使用networkx时有效, 可选值为"all_pair"和"single_pair"
 ):
     # 整体思路： 分别在每个发散区域内部计算目标点的全路径， 在整体图上合并计算距离
     # NOTE: 0. 预处理
@@ -91,7 +98,7 @@ def calculate_geodesic_distances_(
 
     # 合并发散区域
     divergence_regions = pd.concat([divergence_regions, extra_divergences]).reset_index(drop=True)
-    divergence_regions["is_start"] = divergence_regions["is_start"].astype(bool) # 确保is_start为bool类型
+    divergence_regions["is_start"] = divergence_regions["is_start"].astype(bool)  # 确保is_start为bool类型
     divergence_ids = divergence_regions["divergence_id"].unique()
 
     # 准备使用NetworkX, 构造相关数据, 从DataFrame开始构造
@@ -148,32 +155,65 @@ def calculate_geodesic_distances_(
 
     # NOTE: 2. 合并计算
     # 合并两个图到一张图上
-    graph = pd.concat([milestone_network, cell_in_tent_distances]).groupby(["from", "to"]).agg({"length": "min"}).reset_index()  # 合并后提取最短边，目前没什么效果，可能对环图有用
-    graph = nx.from_pandas_edgelist(graph, source="from", target="to", edge_attr="length")
-    # 选择后续有向图的最短距离模式
-    if directed or directed == "forward":
-        mode = "out"
-    elif directed == "reverse":
-        mode = "in"
-    else:
-        mode = "all"
+    edgelist_df = pd.concat([milestone_network, cell_in_tent_distances]).groupby(["from", "to"]).agg({"length": "min"}).reset_index()  # 合并后提取最短边，目前没什么效果，可能对环图有用
 
-    # 调用dijkstra计算, 计算waypoint和cell之间的
-    out = pd.DataFrame(np.zeros((len(waypoint_ids), len(cell_ids))), index=waypoint_ids, columns=cell_ids)
-    for source in waypoint_ids:
-        length_dict = nx.single_source_dijkstra_path_length(graph, source=source, weight="length")
-        for target in cell_ids:
-            if target in length_dict:
-                out.loc[source, target] = length_dict[target]
-            else:
-                out.loc[source, target] = np.inf
+    # 调用dijkstra计算, 计算waypoint和cell之间的距离
+    if graph_package == "networkx":
+        # 使用networkx包计算最短路径
+        graph = nx.from_pandas_edgelist(edgelist_df, source="from", target="to", edge_attr="length")  # 构造图
+        if merge_mode == "single_source":
+            # 计算waypoint为起点的最短路径
+            out = pd.DataFrame(np.zeros((len(waypoint_ids), len(cell_ids))), index=waypoint_ids, columns=cell_ids)
+            for source in waypoint_ids:
+                length_dict = nx.single_source_dijkstra_path_length(graph, source=source, weight="length")
+                for target in cell_ids:
+                    if target in length_dict:
+                        out.loc[source, target] = length_dict[target]
+                    else:
+                        out.loc[source, target] = np.inf
+        else:
+            # 计算全部的节点对间最短距离, 分别提取
+            all_length_dict = dict(nx.all_pairs_dijkstra_path_length(graph,  weight="length"))
+            out = pd.DataFrame(all_length_dict).loc[waypoint_ids, cell_ids]
+    else:
+        # 使用igraph包计算最短路径
+        # from igraph import Graph
+        import igraph as ig
+
+        if directed or directed == "forward":
+            mode = "out"
+        elif directed == "reverse":
+            mode = "in"
+        else:
+            mode = "all"
+        # # 从networkX创建
+        # graph = nx.from_pandas_edgelist(edgelist_df, source="from", target="to", edge_attr="length")
+        # gr = ig.Graph.from_networkx(graph)
+
+        # # 从dataframe创建
+        # # ig.Graph.DataFrame要求索引为数字，否则会报错, 并且无法指定边权
+        # v_df = pd.DataFrame(pd.concat([edgelist_df["from"], edgelist_df["to"]]).unique())
+        # v_name2id = v_df.reset_index().set_index(0)["index"].to_dict()
+        # v_id2name = v_df.reset_index().set_index("index")[0].to_dict()
+        # def trans_name2id(row):
+        #     row["from"] = v_name2id[row["from"]]
+        #     row["to"] = v_name2id[row["to"]]
+        #     return row
+        # igraph_edgelist_df = edgelist_df.apply(lambda x: trans_name2id(x), axis=1)
+        # gr = ig.Graph.DataFrame(igraph_edgelist_df)
+        # list(gr.vs)
+        # list(gr.es)
+        # ig.Graph.TupleList更加像nx.from_pandas_edgelist
+        gr = ig.Graph.TupleList(edgelist_df.values, edge_attrs=["length"])
+        shortest_paths = gr.shortest_paths(source=waypoint_ids, target=cell_ids, weights="length", mode=mode)
+        out = pd.DataFrame(shortest_paths, index=waypoint_ids, columns=cell_ids)
 
     # TODO: 过滤一些细胞
     cell_ids_filtered = []
     if len(cell_ids_filtered) > 0:
         pass
 
-    return out.loc[waypoint_ids, cell_ids]
+    return out
 
 
 def calculate_geodesic_distances_me():

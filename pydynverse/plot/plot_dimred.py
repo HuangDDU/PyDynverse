@@ -13,7 +13,7 @@ from ..dimred import dimred_mds, dimred_tsne, dimred_iosmap
 
 def plot_dimred(
         trajectory,
-        color_cells="milestone",
+        color_cells="auto",
         dimred=None,
         plot_trajectory=True,
         plot_milestone_network=True,

@@ -49,6 +49,7 @@ def select_waypoints(
     ).rename(columns={"cell_id": "waypoint_id"})
 
     # waypoint到细胞的距离, (n_waypoints, n_cells)
+    # 距离计算时当前的时间怕
     waypoint_geodesic_distances = calculate_geodesic_distances(
         trajectory,
         waypoint_milestone_percentages=waypoint_milestone_percentages

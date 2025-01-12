@@ -15,8 +15,6 @@ def project_waypoints_coloured(
     color_trajectory=None
 ):
     if waypoints is None:
-        # TODO: 真实数据集上，这里示例数据集在Slingshot运行的太慢大约40s，而在PAGA运行1s，需要分析原因并加速
-        # TODO: 计算时间瓶颈, 需要优化
         logger.debug("selecting waypoints")
         waypoints = select_waypoints(trajectory)
         logger.debug(f"selecting waypoints shape is {waypoints['geodesic_distances'].shape}, finished!")
