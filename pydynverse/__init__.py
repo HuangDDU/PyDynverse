@@ -6,6 +6,7 @@ from . import methods
 from . import plot
 from . import dimred
 from . import eval
+from . import benchmark
 
 __all__ = [
     "data",
@@ -13,7 +14,8 @@ __all__ = [
     "methods",
     "plot",
     "dimred",
-    "eval"
+    "eval",
+    "benchmark"
 ]
 
 # ASCII艺术字链接：http://patorjk.com/software/taag

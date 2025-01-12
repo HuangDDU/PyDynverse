@@ -5,6 +5,7 @@ from ..wrap import simplify_trajectory
 from .metric_isomorphic import calc_isomorphic
 from .metric_flip import calculate_edge_flip
 from .metric_him import calculate_him
+from .metric_mapping import calculate_mapping_branches, calculate_mapping_milestones
 
 
 def calculate_metrics(
@@ -31,6 +32,12 @@ def calculate_metrics(
         summary_dict["edge_flip"] = calculate_edge_flip(net1, net2)
     if "him" in metrics:
         summary_dict["him"] = calculate_him(net1, net2)
+
+    if "F1_branch" in metrics:
+        summary_dict["F1_branch"] = calculate_mapping_branches()
+
+    if "F1_milestone" in metrics:
+        summary_dict["F1_milestone"] = calculate_mapping_milestones()
 
     # 其他指标
     return summary_dict

@@ -13,6 +13,7 @@ from .wrap_add_linear_trajectory import add_linear_trajectory
 from .simplify_trajectory import simplify_trajectory
 from .simplify_networkx_network import simplify_networkx_network
 from .calculate_trajectory_dimred import calculate_trajectory_dimred
+from .wrap_add_grouping import group_onto_trajectory_edges, group_onto_nearest_milestones
 
 from .method_create_ti_method_py import create_ti_method_py
 
@@ -34,4 +35,7 @@ __all__ = [
     "add_linear_trajectory",
     "create_ti_method_py",
     "calculate_trajectory_dimred",
+    "group_onto_trajectory_edges",
+    "group_onto_nearest_milestones"
+
 ]

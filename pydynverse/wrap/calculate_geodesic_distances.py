@@ -70,6 +70,7 @@ def calculate_geodesic_distances_(
 
     # 重命名milestones_id来避免冲突, 添加前缀并在milestone_id相关内容里修改
     def milestone_trafo_fun(x): return f"MILESTONE_{x}"
+    milestone_network = milestone_network.copy() # 不会对原始milestone_network产生影响
     milestone_network["from"] = milestone_network["from"].apply(milestone_trafo_fun)
     milestone_network["to"] = milestone_network["to"].apply(milestone_trafo_fun)
     milestone_ids = list(map(milestone_trafo_fun, milestone_ids))
