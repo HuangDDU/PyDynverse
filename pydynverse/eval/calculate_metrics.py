@@ -33,6 +33,7 @@ def calculate_metrics(
     if "him" in metrics:
         summary_dict["him"] = calculate_him(net1, net2)
 
+    # 传参调整
     if "F1_branch" in metrics:
         summary_dict["F1_branch"] = calculate_mapping_branches()
 
