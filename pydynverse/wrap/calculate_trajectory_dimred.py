@@ -1,7 +1,6 @@
+import itertools
 import pandas as pd
 import networkx as nx
-
-from sklearn.preprocessing import StandardScaler
 
 
 def calculate_trajectory_dimred(trajectory, adjust_weights=False):
@@ -38,7 +37,7 @@ def calculate_trajectory_dimred(trajectory, adjust_weights=False):
     gr = nx.from_pandas_edgelist(structure, source="from", target="to", edge_attr=True, create_using=nx.DiGraph if is_directed else nx.Graph)
     # pos = nx.kamada_kawai_layout(gr)
     # pos = nx.spring_layout(gr, seed=0)  # dict node:position
-    pos = nx.nx_agraph.graphviz_layout(gr, prog="dot") # graphviz的dot有向无环图布局更加合适
+    pos = nx.nx_agraph.graphviz_layout(gr, prog="dot")  # graphviz的dot有向无环图布局更加合适
     layout = pd.DataFrame(pos).T  # dataframe
     # 是否Z归一化差距不大
     # layout = pd.DataFrame(StandardScaler().fit_transform(layout), columns=layout.columns, index=layout.index)  # 布局Z归一化
@@ -53,23 +52,36 @@ def calculate_trajectory_dimred(trajectory, adjust_weights=False):
 
     milestone_positions = layout
 
-    edge_positions = None  # TODO: 这里暂时不需要手动绘制边，NetworkX会自动绘制边
+    edge_positions = None  # NOTE: 这里暂时不需要手动绘制边，NetworkX会自动绘制边
 
-    # TODO: 提取发散区域的线或多边形区域
+    # 提取发散区域的线或多边形区域
     if (divergence_regions is not None) and (divergence_regions.shape[0] > 0):
-        pass
+        triags = get_divergence_triangles(divergence_regions)
+        triags
+        # 边坐标稍后绘制虚线
+        divergence_edge_positions = triags.rename(columns={"node1": "from", "node2": "to"})
+        divergence_edge_positions[["comp_1_from", "comp_2_from"]] = divergence_edge_positions["from"].apply(lambda x: milestone_positions.loc[x])
+        divergence_edge_positions[["comp_1_to", "comp_2_to"]] = divergence_edge_positions["to"].apply(lambda x: milestone_positions.loc[x])
+        # 多边形区域稍后绘制阴影
+        divergence_polygon_positions = triags.copy()
+        divergence_polygon_positions["triangle_id"] = [f"triangle_{i}" for i in range(triags.shape[0])]
+        divergence_polygon_positions = divergence_polygon_positions.melt(
+            id_vars=["triangle_id"],
+            value_vars=["start", "node1", "node2"],
+            var_name="triangle_part",
+            value_name="milestone_id"
+        )  # 沿着triangle_id展开宽数据为长数据
+        divergence_polygon_positions[["comp_1", "comp_2"]] = divergence_polygon_positions["milestone_id"].apply(lambda x: milestone_positions.loc[x])
     else:
-        pass
-
-    divergence_edge_positions = None
-    divergence_polygon_positions = None
+        divergence_edge_positions = pd.DataFrame(columns=["divergence_id", "start", "from", "to", "comp_1_from", "comp_2_from", "comp_1_to", "comp_2_to"])
+        divergence_polygon_positions = pd.DataFrame(columns=["triangle_id", "triangle_part", "milestone_id", "comp_1", "comp_2"])
 
     return {
         "milestone_positions": milestone_positions,
         "edge_positions": edge_positions,  # None
         "cell_positions": cell_positions,
-        "divergence_edge_positions": divergence_edge_positions,  # None
-        "divergence_polygon_positions": divergence_polygon_positions,  # None
+        "divergence_edge_positions": divergence_edge_positions,
+        "divergence_polygon_positions": divergence_polygon_positions,
         # 额外添加
         "gr": gr,
         "pos": pos,
@@ -77,4 +89,20 @@ def calculate_trajectory_dimred(trajectory, adjust_weights=False):
 
 
 def get_divergence_triangles(divergence_regions):
-    return None
+    # TODO: 在CellFateExplorer中可以替换成循环实现
+    def get_divergence_edge_df(did):
+        rel_did = divergence_regions[divergence_regions["divergence_id"] == did]
+
+        fr = rel_did[rel_did["is_start"]]["milestone_id"].tolist()[0]  # 只有一个
+        tos = rel_did[~rel_did["is_start"]]["milestone_id"].tolist()
+
+        de_df = pd.DataFrame(itertools.product(tos, tos), columns=["node1", "node2"])
+        de_df = de_df[de_df["node1"] < de_df["node2"]]
+        de_df["divergence_id"] = did
+        de_df["start"] = fr
+
+        return de_df
+
+    triangles = pd.concat([get_divergence_edge_df(did) for did in divergence_regions["divergence_id"].unique()])
+
+    return triangles[["divergence_id", "start", "node1", "node2"]]

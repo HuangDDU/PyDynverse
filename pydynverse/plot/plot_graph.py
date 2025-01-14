@@ -1,4 +1,5 @@
 import matplotlib.pyplot as plt
+import matplotlib.patches as patches
 import pandas as pd
 import networkx as nx
 import scanpy as sc
@@ -26,8 +27,21 @@ def plot_graph(trajectory, color_cells="auto", color_milestones=None, grouping=N
 
     milestone_positions = dimred_traj["milestone_positions"]
 
-    # 先绘制网络
     ax = plt.subplots(1, 1)[1]
+    # 绘制分支承诺区域
+    # 发散区域灰色背景
+    dpp = dimred_traj["divergence_polygon_positions"]
+    for triangle_id in dpp["triangle_id"].unique():
+        polygon_vertices = dpp[dpp["triangle_id"] == triangle_id][["comp_1", "comp_2"]].values  # 提取边界点
+        polygon = patches.Polygon(polygon_vertices, closed=True, fill=True, color="lightblue", alpha=0.5)
+        ax.add_patch(polygon)
+    # 发散区域灰色虚线
+    dep = dimred_traj["divergence_edge_positions"]
+    x_edges = dep[["comp_1_from", "comp_1_to"]].T.values  # 2*n
+    y_edges = dep[["comp_2_from", "comp_2_to"]].T.values  # 2*n
+    ax.plot(x_edges, y_edges, color="gray", linestyle="--", linewidth=5)
+
+    # 绘制网络
     G = dimred_traj["gr"]
     pos = dimred_traj["pos"]
     milestone_size = 300
