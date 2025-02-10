@@ -7,7 +7,7 @@ from .simplify_networkx_network import simplify_networkx_network
 
 def simplify_trajectory(trajectory, allow_self_loops=False):
     # TODO: 简化轨迹
-    # 构造igraph图
+    # 构造networkx图
     is_directed = trajectory["milestone_network"]["directed"].all()
     gr = nx.from_pandas_edgelist(
         trajectory["milestone_network"],

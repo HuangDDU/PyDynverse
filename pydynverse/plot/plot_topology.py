@@ -14,4 +14,4 @@ def plot_topology(trajectory, ax=None, nx_draw_kwrags={}, layout="dot"):
     else:
         pos = nx.spring_layout(G)
 
-    nx.draw(G, pos, with_labels=True, node_color=[milestone_color.loc[node, "color"] for node in G.nodes], ax=ax, **nx_draw_kwrags)
+    nx.draw(G, pos, with_labels=True, node_color=milestone_color.loc[list(G.nodes), "color"].values, ax=ax, **nx_draw_kwrags)

@@ -57,7 +57,6 @@ def calculate_trajectory_dimred(trajectory, adjust_weights=False):
     # 提取发散区域的线或多边形区域
     if (divergence_regions is not None) and (divergence_regions.shape[0] > 0):
         triags = get_divergence_triangles(divergence_regions)
-        triags
         # 边坐标稍后绘制虚线
         divergence_edge_positions = triags.rename(columns={"node1": "from", "node2": "to"})
         divergence_edge_positions[["comp_1_from", "comp_2_from"]] = divergence_edge_positions["from"].apply(lambda x: milestone_positions.loc[x])
