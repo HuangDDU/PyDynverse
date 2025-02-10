@@ -3,7 +3,7 @@ import rpy2.robjects as ro
 from ..util import rpy2_read  # 导入对应的装饰器， 实现数据自动转换
 
 
-def load_simulation_data(data_filename="synthetic/dyntoy/bifurcating_1.rds", data_dir="/home/huang/RCode/scrna_tools/dynbenchmark/data"):
+def load_simulation_data(data_filename="synthetic/dyntoy/bifurcating_1.rds", data_dir="/usr/share/CellFateExplorer/dynbenchmark/data/"):
     #  读取模拟数据，默认读取二分支结构
     r_script = f"""
     dataset <- readRDS("{data_dir}/{data_filename}")
