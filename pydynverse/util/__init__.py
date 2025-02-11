@@ -2,6 +2,7 @@ from .random_time_string import random_time_string
 from .h5 import read_h5, write_h5
 from . inherit_default_params import inherit_default_params
 from .calculate_distance import calculate_distance, list_similarity_methods
+from .project_to_segments import project_to_segments
 
 __all__ = [
     "random_time_string",
@@ -9,5 +10,6 @@ __all__ = [
     "write_h5",
     "inherit_default_params",
     "calculate_distance",
-    "list_similarity_methods"
+    "list_similarity_methods",
+    "project_to_segments"
 ]

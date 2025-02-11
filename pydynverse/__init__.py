@@ -8,6 +8,7 @@ from . import dimred
 from . import eval
 from . import benchmark
 from . import toy
+from . import util
 
 __all__ = [
     "data",
@@ -18,6 +19,7 @@ __all__ = [
     "eval",
     "benchmark",
     "toy",
+    "util",
     
 ]
 
