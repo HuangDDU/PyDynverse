@@ -20,11 +20,11 @@ def method_choose_backend(
         backend=None,
 ):
     # 候选使用wrapper脚本或者Docker容器
-    correct_backends = ["function", "container"]
+    correct_backends = ["python_function", "container"]
 
     # 默认从设置中读取
     if backend is None:
-        backend = settings["backend"]
+        backend = settings["backend"] # 设置了之后仍然可能为None
     if backend is None:
         # 按照选择后端
         if (not function_name is None) and (container_id is None):

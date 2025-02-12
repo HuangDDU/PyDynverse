@@ -33,7 +33,8 @@ def add_dimred(
 
     if dimred_segment_points is not None or dimred_segment_progressions is not None:
         # TODO: 降维后的不连通的分段设置
-        pass
+        dimred_segment_points = None
+        dimred_segment_progressions = None
 
     dataset["dimred"] = dimred
     dataset["dimred_milestones"] = dimred_milestones
