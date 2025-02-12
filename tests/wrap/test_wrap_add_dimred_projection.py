@@ -3,31 +3,12 @@ import pydynverse as pdv
 import pandas as pd
 
 from .test_wrap_add_waypoints import get_test_wrap_data as get_test_wrap_data_ref
+from ..test_util import compare_dataframes_closely
 
 
 def get_test_wrap_data():
     # 复用test_wrap_add_waypoints中的数据
     dataset, milestone_network, divergence_regions, milestone_percentages = get_test_wrap_data_ref()
-    # expected_milestone_percentages = milestone_percentages[milestone_percentages["cell_id"] == "e"]
-    expected_milestone_percentages = pd.DataFrame(
-        columns=["cell_id", "milestone_id", "percentage"],
-        data=[
-            ["e", "X", 0.5],
-            ["e", "Y", 0.5]
-        ]
-    )
-    expected_milestone_percentages = pd.concat([expected_milestone_percentages, milestone_percentages.query("cell_id != 'e'")])
-    expected_progressions = pd.DataFrame(
-        columns=["cell_id", "from", "to", "percentage"],
-        data=[
-            ["a", "W", "X", 0],
-            ["b", "W", "X", 0.8],
-            ["c", "X", "Z", 0.2],
-            ["d", "X", "Z", 1],
-            ["e", "X", "Y", 0.5],
-            ["f", "Z", "A", 0.2],
-        ]
-    )
 
     # 手动指定2维降维
     dimred = pd.DataFrame(
@@ -54,6 +35,27 @@ def get_test_wrap_data():
     dimred.set_index("cell_id", inplace=True)
     dimred_milestones.set_index("milestone_id", inplace=True)
 
+    # 预期输出
+    expected_milestone_percentages = pd.DataFrame(
+        columns=["cell_id", "milestone_id", "percentage"],
+        data=[
+            ["e", "X", 0.5],
+            ["e", "Y", 0.5]
+        ]
+    )
+    expected_milestone_percentages = pd.concat([expected_milestone_percentages, milestone_percentages.query("cell_id != 'e'")])
+    expected_progressions = pd.DataFrame(
+        columns=["cell_id", "from", "to", "percentage"],
+        data=[
+            ["a", "W", "X", 0],
+            ["b", "W", "X", 0.8],
+            ["c", "X", "Z", 0.2],
+            ["d", "X", "Z", 1],
+            ["e", "X", "Y", 0.5],
+            ["f", "Z", "A", 0.2],
+        ]
+    )
+
     test_wrap_data = {
         "dataset": dataset,
         "milestone_network": milestone_network,
@@ -74,17 +76,29 @@ def test_add_dimred_projection():
     milestone_network = test_wrap_data["milestone_network"]
     dimred = test_wrap_data["dimred"]
     dimred_milestones = test_wrap_data["dimred_milestones"]
-    expected_milestone_percentages = test_wrap_data["expected_milestone_percentages"]
-    expected_progression = test_wrap_data["expected_progression"]
 
+    # 预期输出
+    expected_milestone_percentages = test_wrap_data["expected_milestone_percentages"]
+    expected_progressions = test_wrap_data["expected_progressions"]
+
+    # 执行
     trajectory = pdv.wrap.add_dimred_projection(
         dataset=dataset,
         milestone_network=milestone_network,
         dimred=dimred,
         dimred_milestones=dimred_milestones
     )
-    # assert trajectory["milestone_percentages"].equals(expected_milestone_percentages)
-    # assert trajectory["progression"].equals(expected_progression)
+
+    # assert trajectory["milestone_percentages"].equals(expected_milestone_percentages) # percentage是progression的间接结果
+    assert compare_dataframes_closely(
+        df1=trajectory["progressions"],
+        df2=expected_progressions,
+        on_columns=list(expected_progressions.columns)
+    )  # progression是直接结果
+
+    # TODO: dimred判断
+
+
 
 
 if __name__ == "__main__":

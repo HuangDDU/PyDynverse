@@ -18,20 +18,20 @@ def add_dimred(
 
     cell_ids = dataset["cell_ids"]
     dimred_type = type(dimred)
-    if dimred_type == np.array:
-        # 指定降维结果,直接赋值
-        dimred = process_dimred(dataset, dimred)
-    else:
+    if type(dimred) == "str":
         # 指定降维方法, 需要传入表达矩阵执行来获得降维结果
         expression = get_expression(dataset, expression_source)
         dimred = dimred(expression)
         dimred.index = cell_ids  # 这里的DataFrame手动添加索引
+    else:
+        # 指定降维结果,直接赋值
+        dimred = process_dimred(dataset, dimred)
 
-    if dimred_milestones:
+    if dimred_milestones is not None:
         # TODO: 降维后的里程碑milestone设置
         pass
 
-    if dimred_segment_points or dimred_segment_progressions:
+    if dimred_segment_points is not None or dimred_segment_progressions is not None:
         # TODO: 降维后的不连通的分段设置
         pass
 
