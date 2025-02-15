@@ -177,7 +177,7 @@ def simplify_get_neighbours(subgr, is_directed):
             neighs["neighs_in"] .append(in_neighbors)
             neighs["neighs_out"].append(out_neighbors)
         else:
-            neighs["neighs"].append(list(subgr.neighbors(node)))
+            neighs["neighs"].append([name2id[i] for i in list(subgr.neighbors(node))])
     return neighs
 
 
@@ -206,8 +206,7 @@ def simplify_get_next(neighs, v_rem, is_directed, left=False, prev=None):
         else:
             return neighs["neighs_out"][v_rem][0]  # 出度即向后
     else:
-        # 无向图上要除去上一步的节点
-        neighs["neighs"].remove(prev)
+        return list(set(neighs["neighs"][v_rem]) - set([prev]))[0] # 无向图上要除去上一步的节点
 
 
 def anti_join(df_left, df_right, on=None):

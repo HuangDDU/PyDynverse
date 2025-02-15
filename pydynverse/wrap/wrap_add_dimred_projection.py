@@ -50,6 +50,7 @@ def add_dimred_projection(dataset, milestone_network, dimred, dimred_milestones,
                     tmp_progressions["percentage"] = proj["progression"]
                     tmp_progressions = tmp_progressions[["cell_id", "from", "to", "percentage"]].reset_index(drop=True)
                 else:
+                    # 单独的在里程碑的自环边上
                     tmp_progressions = pd.DataFrame(data=[cell_id for cell_id in cids], columns=["cell_id"])
                     tmp_progressions["from"] = group_id
                     tmp_progressions["to"] = group_id
