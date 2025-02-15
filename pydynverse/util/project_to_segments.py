@@ -41,9 +41,13 @@ def project_to_segments(x, segment_start, segment_end):
 
         # Iterate over the segments
         for segi in range(nsegs):
+            # If test_progression is between 0 and 1, the projection is on the segment. 
+            # Else it is outside the segment, <0 before the start, >1 after the end
             test_progression = np.dot(diff[segi, :], p - segment_start[segi, :]) / length[segi]
 
-            # Clamp progression between 0 and 1
+            # Clamp progression between 0 and 1,
+            # If the projection is on the segment, projection is valid
+            # Else move the projection to the closest endpoint
             test_progression = max(0.0, min(1.0, test_progression))
 
             # Calculate position of projection and the distance

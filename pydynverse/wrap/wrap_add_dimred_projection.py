@@ -1,8 +1,7 @@
-import pandas as pd
-
-from ..util import project_to_segments
-from .wrap_add_trajectory import add_trajectory
 from .wrap_add_dimred import add_dimred
+from .wrap_add_trajectory import add_trajectory
+from ..util import project_to_segments
+import pandas as pd
 
 
 def add_dimred_projection(dataset, milestone_network, dimred, dimred_milestones, grouping=None):
@@ -30,8 +29,36 @@ def add_dimred_projection(dataset, milestone_network, dimred, dimred_milestones,
         progressions = progressions[["cell_id", "from", "to", "percentage"]].reset_index(drop=True)
     else:
         # TODO: 给定了聚类标签，把细胞投影到所属聚类对应的线段上
-        progressions = None
+        grouping = pd.Series(grouping, index=cell_ids)
+        group_ids = grouping.unique()
+        progressions = [] # dataframe列表
 
+        for group_id in group_ids:
+            cids = grouping[grouping == group_id].index
+
+            if cids.shape[0] > 0:
+                mns = milestone_network.query("`from` == @group_id or `to` == @group_id") # query语句查询，``列名，@数值
+                if mns.shape[0] > 0:
+                    # 投影到对应边上
+                    proj = project_to_segments(
+                        x=dimred.loc[cids],
+                        segment_start=dimred_milestones.loc[mns["from"],],
+                        segment_end=dimred_milestones.loc[mns["to"],],
+                    )
+                    tmp_progressions = mns.iloc[proj["segment"]-1][["from", "to"]]
+                    tmp_progressions["cell_id"] = cids
+                    tmp_progressions["percentage"] = proj["progression"]
+                    tmp_progressions = tmp_progressions[["cell_id", "from", "to", "percentage"]].reset_index(drop=True)
+                else:
+                    tmp_progressions = pd.DataFrame(data=[cell_id for cell_id in cids], columns=["cell_id"])
+                    tmp_progressions["from"] = group_id
+                    tmp_progressions["to"] = group_id
+                    tmp_progressions["percentage"] = 1
+                progressions.append(tmp_progressions)
+            else:
+                pass
+        progressions = pd.concat(progressions)
+        progressions.reset_index(drop=True)
     # 降维相关的保存
     def expand_row(row):
         new_df = pd.concat([row]*2, axis=1).T
