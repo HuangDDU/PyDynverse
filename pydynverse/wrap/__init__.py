@@ -14,7 +14,8 @@ from .simplify_trajectory import simplify_trajectory
 from .simplify_networkx_network import simplify_networkx_network
 from .calculate_trajectory_dimred import calculate_trajectory_dimred
 from .wrap_add_grouping import group_onto_trajectory_edges, group_onto_nearest_milestones
-from . wrap_add_dimred_projection import add_dimred_projection
+from .wrap_add_dimred_projection import add_dimred_projection
+from .wrap_add_cell_graph import add_cell_graph
 
 from .method_create_ti_method_py import create_ti_method_py
 
@@ -39,5 +40,6 @@ __all__ = [
     "group_onto_trajectory_edges",
     "group_onto_nearest_milestones",
     "add_dimred_projection",
+    "add_cell_graph",
 
 ]
