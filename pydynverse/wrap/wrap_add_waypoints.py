@@ -31,7 +31,7 @@ def select_waypoints(
             case _:
                 return f"W{row.name+1}"  # 这里与R保持一致，W从1开始算
     waypoint_progressions = trajectory["milestone_network"].copy()
-    waypoint_progressions["percentage"] = waypoint_progressions["length"].apply(lambda x: [i/x for i in np.arange(0, x, resolution)] + [1]) # 按照分辨率为固定步长划分milestone_network的边, 添加到percentage列上
+    waypoint_progressions["percentage"] = waypoint_progressions["length"].apply(lambda x: [i/trafo(x) for i in np.arange(0, trafo(x), resolution)] + [1]) # 按照分辨率为固定步长划分milestone_network的边, 添加到percentage列上
     waypoint_progressions = waypoint_progressions[["from", "to", "percentage"]]
     waypoint_progressions = waypoint_progressions.explode("percentage").reset_index(drop=True)  # 展开
     waypoint_progressions["percentage"] = waypoint_progressions["percentage"].astype("float")
