@@ -2,7 +2,7 @@ import pytest
 import pydynverse as pdv
 
 import pandas as pd
-from ..test_util import compare_dataframes
+from ..test_util import compare_dataframes_closely
 
 
 def test_wrap_add_cell_graph():
@@ -31,6 +31,7 @@ def test_wrap_add_cell_graph():
             ["ZfA", "f", 0.5, False],
         ]
     )
+    cell_graph["directed"] = True  # 使用有向图，暂时比较简单
 
     to_keep = dict(
         W=True,
@@ -51,13 +52,15 @@ def test_wrap_add_cell_graph():
     )
     to_keep = pd.Series(to_keep)
 
-    pdv.wrap.add_cell_graph(
+    # 执行
+    trajectory = pdv.wrap.add_cell_graph(
         dataset=dataset,
         cell_graph=cell_graph,
         to_keep=to_keep,
         milestone_prefix="ML_",
     )
 
+    # 预期输出
     expected_milestone_ids = [f"ML_{i}"for i in ["W", "X", "Y", "A"]]
     expected_milestone_network = pd.DataFrame(
         columns=["from", "to", "length", "directed"],
@@ -67,6 +70,7 @@ def test_wrap_add_cell_graph():
             ["ML_X", "ML_A", 2, False],
         ]
     )
+    expected_milestone_network["directed"] = True  # 使用有向图，暂时比较简单
 
     expected_progressions = pd.DataFrame(
         columns=["cell_id", "from", "to", "percentage"],
@@ -89,9 +93,10 @@ def test_wrap_add_cell_graph():
         ]
     )
 
-    assert expected_milestone_ids == expected_milestone_ids
-    assert compare_dataframes(expected_milestone_network, expected_milestone_network, on_columns=["from", "to"])
-    assert compare_dataframes(expected_progressions, expected_progressions, on_columns=["cell_id"])
+    # assert
+    assert trajectory["milestone_ids"] == expected_milestone_ids
+    assert compare_dataframes_closely(trajectory["milestone_network"], expected_milestone_network, on_columns=["from", "to"])
+    assert compare_dataframes_closely(trajectory["progressions"], expected_progressions, on_columns=["cell_id"])
 
 
 if __name__ == "__main__":
