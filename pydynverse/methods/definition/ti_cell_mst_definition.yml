@@ -9,7 +9,7 @@ container:
   docker: xxx
 
 wrapper:
-  type: dimred_projection
+  type: cell_graph
   topology_inference: free
   trajectory_types:
     - linear
