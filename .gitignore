@@ -5,3 +5,7 @@ output
 # 测试文件夹
 *.pytest_cache
 tests/plot/img/*
+
+.vscode
+.env
+.pytest.ini
