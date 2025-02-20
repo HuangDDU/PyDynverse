@@ -6,7 +6,7 @@ from ..test_util import compare_dataframes_closely
 
 
 def get_test_data_linear():
-    id = "directed_linear"
+    id = "linear_directed"
     cell_ids = ["a", "b", "c", "d", "e"]
     milestone_ids = ["A", "B", "C", "D"]
     milestone_network = pd.DataFrame(
@@ -64,7 +64,7 @@ def get_test_data_linear():
     return test_data
 
 
-def test_simplify_trajectory_directed_linear():
+def test_simplify_trajectory_linear_directed():
 
     test_data = get_test_data_linear()
     trajectory = test_data["trajectory"]
@@ -79,9 +79,9 @@ def test_simplify_trajectory_directed_linear():
     assert compare_dataframes_closely(trajectory["progressions"], expected_progressions, on_columns="cell_id")
 
 
-def test_simplify_trajectory_undirected_linear():
+def test_simplify_trajectory_linear_undirected():
     test_data = get_test_data_linear()
-    id = test_data["id"]
+    id = "linear_undirected"
     cell_ids = test_data["cell_ids"]
     milestone_ids = test_data["milestone_ids"]
     milestone_network = test_data["milestone_network"]
@@ -107,7 +107,7 @@ def test_simplify_trajectory_undirected_linear():
 
 
 def get_test_data_bifurcation():
-    id = "directed_bifurcation"
+    id = "bifurcation_directed"
     cell_ids = ["a", "b", "c", "d", "e", "f"]
     milestone_ids = ["A", "B", "C", "D", "E", "F", "G"]
     milestone_network = pd.DataFrame(
@@ -175,7 +175,7 @@ def get_test_data_bifurcation():
     return test_data
 
 
-def test_simplify_trajectory_directed_bifurcation():
+def test_simplify_trajectory_bifurcation_directed():
     test_data = get_test_data_bifurcation()
     trajectory = test_data["trajectory"]
 
@@ -189,9 +189,9 @@ def test_simplify_trajectory_directed_bifurcation():
     assert compare_dataframes_closely(trajectory["progressions"], expected_progressions, on_columns="cell_id")
 
 
-def test_simplify_trajectory_undirected_bifurcation():
+def test_simplify_trajectory_bifurcation_undirected():
     test_data = get_test_data_bifurcation()
-    id = test_data["id"]
+    id = "bifurcation_undirected"
     cell_ids = test_data["cell_ids"]
     milestone_ids = test_data["milestone_ids"]
     milestone_network = test_data["milestone_network"]
@@ -231,7 +231,7 @@ def test_simplify_trajectory_undirected_bifurcation():
     
     # assert
     assert trajectory["milestone_network"].equals(expected_milestone_network)
-    assert compare_dataframes_closely(trajectory["progressions"], expected_progressions, on_columns="cell_id") # TODO: 这里暂时有问题，progression里出现了milestone_network中没有的milestone
+    assert compare_dataframes_closely(trajectory["progressions"], expected_progressions, on_columns="cell_id")
 
 
 if __name__ == "__main__":

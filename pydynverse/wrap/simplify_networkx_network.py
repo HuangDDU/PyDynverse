@@ -80,9 +80,10 @@ def simplify_subgraph(subgr, is_directed, force_keep, edge_points):
     neighs = simplify_get_neighbours(subgr, is_directed)
     to_process = [not i for i in keep_v]
     for v_rem in range(num_vs):
+        # 从特定位置开始，向前（入度）向后（出度）搜索删除链
         if to_process[v_rem]:
             to_process[v_rem] = False
-            # 入度前驱节点、边处理
+            # 向前、入度前驱节点、边处理
             i = simplify_get_i(neighs, v_rem, is_directed)  # 前驱节点
             i_prev = v_rem
             left_path = [{"from": i, "to": i_prev, "weight": simplify_get_edge(subgr, i, i_prev)["weight"]}]
@@ -95,7 +96,7 @@ def simplify_subgraph(subgr, is_directed, force_keep, edge_points):
                 # left_path.append({"from": i, "to": i_prev, "weight": simplify_get_edge(subgr, i, i_prev)["weight"]})
                 left_path.append({"from": i, "to": i_prev, "weight": subgr.edges[(node_list[i], node_list[i_prev])]["weight"]})
 
-            # 出度的后继节点边处理
+            # 向后、出度后继节点、边处理
             j = simplify_get_j(neighs, v_rem, is_directed)  # 后继节点
             j_prev = v_rem
             right_path = [{"from": j_prev, "to": j, "weight": simplify_get_edge(subgr, j_prev, j)["weight"]}]
@@ -109,13 +110,14 @@ def simplify_subgraph(subgr, is_directed, force_keep, edge_points):
                 right_path.append({"from": j_prev, "to": j, "weight": subgr.edges[(node_list[j_prev], node_list[j])]["weight"]})
 
             # 拼接后，节点序号转换为节点名字
-            left_path = pd.DataFrame(left_path)
+            left_path = pd.DataFrame(left_path).iloc[::-1].reset_index(drop=True) # 前驱查找需要翻转顺序
             left_path["from"] = [node_list[i] for i in left_path["from"]]
             left_path["to"] = [node_list[i] for i in left_path["to"]]
             right_path = pd.DataFrame(right_path)
             right_path["from"] = [node_list[i] for i in right_path["from"]]
             right_path["to"] = [node_list[i] for i in right_path["to"]]
 
+            # 此时i,j为删除链的前驱后继序号
             if i == j:
                 # TODO: 自环等操作
                 pass
@@ -215,20 +217,32 @@ def anti_join(df_left, df_right, on=None):
     return merged_df[merged_df["_merge"] == "left_only"].drop(columns="_merge")[df_left.columns.tolist()]
 
 
-def simplify_get_edge_points_on_path(sub_edge_points, path):
-    # 对于边上点的处理
-    rev_path = path.rename({"from": "to", "to": "from"})[["from", "to"]]
+def simplify_get_edge_points_on_path(
+        sub_edge_points: pd.DataFrame,
+        path: pd.DataFrame
+        ):
+    """获得在子图milestone_percentage待删除的路径的细胞
+
+    Args:
+        sub_edge_points (pd.DataFrame): 子图milestone_percentage
+        path (pd.DataFrame): 待删除的路径
+
+    Returns:
+        dict: _description_
+    """
+    # 对于边上细胞的的处理
+    rev_path = path.rename(columns={"from": "to", "to": "from"})[["from", "to"]] # 边反转
 
     # 拼接反转后的边和sub_edge_point
-    sepaj = anti_join(sub_edge_points, path, on=["from", "to"])
-    tofilp = pd.merge(sepaj, rev_path, on=["from", "to"])
+    sepaj = anti_join(sub_edge_points, path, on=["from", "to"]) # 仅仅在sub_edge_points但不在path的细胞保留
+    tofilp = pd.merge(sepaj, rev_path, on=["from", "to"]) # 反转细胞：sepaj中还有细胞也应该被剔除掉，这些细胞在rev_path中的边可以在sepaj中找到
 
-    tofilp_tmp = tofilp.rename({"from": "to", "to": "from"})
-    tofilp_tmp["percentage"] = 1 - tofilp_tmp["percentage"]
-    both_sub_edge_points = pd.concat([sub_edge_points, tofilp_tmp])
-    on_path = pd.merge(both_sub_edge_points, path, on=["from", "to"])
+    tofilp_tmp = tofilp.rename(columns={"from": "to", "to": "from"})
+    tofilp_tmp["percentage"] = 1 - tofilp_tmp["percentage"] # 反转细胞percentage计算并额外拼接上去
+    both_sub_edge_points = pd.concat([sub_edge_points, tofilp_tmp]) 
+    on_path = pd.merge(both_sub_edge_points, path, on=["from", "to"]) # 在待删除边上的细胞
 
-    not_on_path = anti_join(sepaj, rev_path, on=["from", "to"])
+    not_on_path = anti_join(sepaj, rev_path, on=["from", "to"]) # 不在带删除边上的细胞
 
     return {
         "on_path": on_path,
