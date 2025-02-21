@@ -27,17 +27,20 @@ def ti_cluster_mst_function(counts, priors, parameters, seed, verbose, cell_ids=
 
     # 3. 聚类细胞，中心点作为里程碑
     # （1）添加聚类
-    sc.pp.neighbors(adata)
-    cluster_key = "clusters"
-    if "groups_id" in priors:
-        # 从先验知识中添加
-        adata.obs[cluster_key] = priors["groups_id"]
+    if "groups_id" not in priors:
+        # 为了方便，这里直接调用scanpy的聚类方法leiden
+        sc.pp.neighbors(adata)
+        sc.tl.leiden(adata)
+        cluster_key = "leiden"
     else:
-        # 调用leiden聚类计算
-        sc.tl.leiden(adata, key_added=cluster_key)
+        # 使用先验知识中的里程碑
+        cluster_key = "mst_cluster"
+        adata.obs[cluster_key] = priors["groups_id"]
+    adata.obs[cluster_key] = pd.Categorical(adata.obs[cluster_key])
     # （2）计算聚类中心的低维坐标
     centers = np.array(list(adata.obs.groupby(cluster_key).apply(lambda x: X_emb[list(x.index)].mean(axis=0))))
     milestone_ids = [f"M{i}"for i in range(centers.shape[0])]
+    cluster_milestones = [milestone_ids[i] for i in adata.obs[cluster_key].cat.codes]
     centers = pd.DataFrame(centers, index=milestone_ids)
     # （3）计算聚类中心间的距离
     dis = pd.DataFrame(pairwise_distances(centers, metric="euclidean"), index=milestone_ids, columns=milestone_ids)
@@ -55,7 +58,7 @@ def ti_cluster_mst_function(counts, priors, parameters, seed, verbose, cell_ids=
     dataset = add_cluster_graph(
         dataset=dataset,
         milestone_network=milestone_network,
-        grouping=adata.obs[cluster_key]
+        grouping=cluster_milestones
     )
 
     dataset["adata"] = adata

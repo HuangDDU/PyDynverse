@@ -17,7 +17,11 @@ wrapper:
     - convergence
     - multifurcation
     - tree
-  input_required: counts
+  input_required:
+    - counts
+  input_optional:
+    - groups_id
+
 
 parameters:
   - id: dimred
