@@ -7,6 +7,9 @@ from .ti_angle import ti_angle
 from .ti_grandprix import ti_grandprix
 from .ti_paga import ti_paga
 from .ti_cell_mst import ti_cell_mst
+from .ti_cluster_mst import ti_cluster_mst
+
+
 __all__ = [
     "ti_comp1",
     "ti_slingshot",

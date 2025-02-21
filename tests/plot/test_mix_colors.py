@@ -7,7 +7,9 @@ from ..wrap.test_wrap_add_waypoints import get_test_wrap_data
 
 
 def test_mix_colors():
-    dataset, milestone_network, divergence_regions, milestone_percentages = get_test_wrap_data()  # 复用test_wrap_add_waypoints数据
+    test_wrap_data = get_test_wrap_data() # 复用test_wrap_add_waypoints数据
+    milestone_percentages = test_wrap_data["milestone_percentages"]
+
     milestone_colors = pd.DataFrame(
         data=[
             [1, 0, 0],

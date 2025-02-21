@@ -45,12 +45,22 @@ def get_test_wrap_data():
     )
 
     dataset = pdv.wrap.wrap_data(id=id, cell_ids=cell_ids)
-    return dataset, milestone_network, divergence_regions, milestone_percentages
+    test_data = {
+        "dataset": dataset,
+        "milestone_network": milestone_network,
+        "divergence_regions": divergence_regions,
+        "milestone_percentages": milestone_percentages,
+    }
+    return test_data
 
 
 def test_wrap_add_waypoints():
     # 测试样例数据
-    dataset, milestone_network, divergence_regions, milestone_percentages = get_test_wrap_data()
+    test_wrap_data = get_test_wrap_data()
+    dataset = test_wrap_data["dataset"]
+    milestone_network = test_wrap_data["milestone_network"]
+    divergence_regions = test_wrap_data["divergence_regions"]
+    milestone_percentages = test_wrap_data["milestone_percentages"]
 
     # 添加轨迹
     trajectory = pdv.wrap.add_trajectory(
@@ -168,7 +178,7 @@ def test_wrap_add_waypoints():
 
     # assert wp["geodesic_distances"].equals(expected_geodesic_distances) # 这里调试看的数值是完全一样的，函数调用计算距离经过多次运算后的精度不一致
     # expected_geodesic_distances.values[1,1]=0.2, wp["geodesic_distances"].values[1,1]=0.19999999999999996
-    assert np.allclose(wp["geodesic_distances"].values, expected_geodesic_distances.values) # 误差在可容忍的范围内
+    assert np.allclose(wp["geodesic_distances"].values, expected_geodesic_distances.values)  # 误差在可容忍的范围内
 
     # waypoint_network关于from与to联合排序后再比较
     sorted_expected_waypoint_network = expected_waypoint_network\

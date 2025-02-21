@@ -8,7 +8,11 @@ from ..test_util import compare_dataframes_closely
 
 def get_test_wrap_data():
     # 复用test_wrap_add_waypoints中的数据
-    dataset, milestone_network, divergence_regions, milestone_percentages = get_test_wrap_data_ref()
+    test_wrap_data = get_test_wrap_data_ref()
+    dataset = test_wrap_data["dataset"]
+    milestone_network = test_wrap_data["milestone_network"]
+    divergence_regions = test_wrap_data["divergence_regions"]
+    milestone_percentages = test_wrap_data["milestone_percentages"]
 
     # 手动指定2维降维
     dimred = pd.DataFrame(
