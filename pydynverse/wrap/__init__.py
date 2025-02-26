@@ -17,6 +17,8 @@ from .wrap_add_grouping import group_onto_trajectory_edges, group_onto_nearest_m
 from .wrap_add_dimred_projection import add_dimred_projection
 from .wrap_add_cell_graph import add_cell_graph
 from .wrap_add_cluster_graph import add_cluster_graph
+from .wrap_add_end_state_probabilities import add_end_state_probabilities
+
 
 from .method_create_ti_method_py import create_ti_method_py
 
@@ -42,6 +44,7 @@ __all__ = [
     "group_onto_nearest_milestones",
     "add_dimred_projection",
     "add_cell_graph",
-    "add_cluster_graph"
+    "add_cluster_graph",
+    "add_end_state_probabilities"
 
 ]
