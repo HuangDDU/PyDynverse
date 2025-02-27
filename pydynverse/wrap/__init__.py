@@ -7,6 +7,7 @@ from .wrap_data import wrap_data, is_data_wrapper
 from .wrap_add_trajectory import add_trajectory
 from .wrap_gather_cells_at_milestones import gather_cells_at_milestones
 from .convert_milestone_percentages_to_progressions import convert_milestone_percentages_to_progressions
+from .convert_progressions_to_milestone_percentages import convert_progressions_to_milestone_percentages
 from .wrap_add_waypoints import select_waypoints
 from .wrap_add_branch_trajectory import add_branch_trajectory
 from .wrap_add_linear_trajectory import add_linear_trajectory
@@ -34,7 +35,8 @@ __all__ = [
     "is_data_wrapper",
     "add_trajectory",
     "gather_cells_at_milestones",
-    "convert_milestone_percentages_to_progressions"
+    "convert_milestone_percentages_to_progressions",
+    "convert_progressions_to_milestone_percentages",
     "select_waypoints",
     "add_branch_trajectory",
     "add_linear_trajectory",
