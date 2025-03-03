@@ -9,11 +9,19 @@ def get_test_wrap_data():
     pseudotime = [0.0, 0.1, 0.4, 0.5, 0.8, 1.0]
     dataset = pdv.wrap.wrap_data(cell_ids=cell_ids, id=id)
     pdv.wrap.add_linear_trajectory(dataset, pseudotime)
-    return dataset, cell_ids, pseudotime
+    test_wrap_data = {
+        "dataset": dataset,
+        "cell_ids": cell_ids,
+        "pseudotime": pseudotime
+    }
+    return test_wrap_data
 
 
 def test_wrap_add_linear_trajectory():
-    dataset, cell_ids, pseudotime = get_test_wrap_data()
+    test_wrap_data = get_test_wrap_data()
+    dataset = test_wrap_data["dataset"]
+    cell_ids = test_wrap_data["cell_ids"]
+    pseudotime = test_wrap_data["pseudotime"]
 
     expected_milestone_ids = ["milestone_begin", "milestone_end"]
     expected_milestone_network = pd.DataFrame({

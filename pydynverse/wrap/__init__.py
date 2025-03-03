@@ -19,6 +19,7 @@ from .wrap_add_dimred_projection import add_dimred_projection
 from .wrap_add_cell_graph import add_cell_graph
 from .wrap_add_cluster_graph import add_cluster_graph
 from .wrap_add_end_state_probabilities import add_end_state_probabilities
+from .wrap_add_cyclic_trajectory import add_cyclic_trajectory
 
 
 from .method_create_ti_method_py import create_ti_method_py
@@ -47,6 +48,6 @@ __all__ = [
     "add_dimred_projection",
     "add_cell_graph",
     "add_cluster_graph",
-    "add_end_state_probabilities"
-
+    "add_end_state_probabilities",
+    "add_cyclic_trajectory"
 ]
