@@ -17,9 +17,8 @@ def add_dimred(
     # 添加降维结果
 
     cell_ids = dataset["cell_ids"]
-    dimred_type = type(dimred)
-    if type(dimred) == "str":
-        # 指定降维方法, 需要传入表达矩阵执行来获得降维结果
+    if callable(dimred):
+        # 指定降维方法函数, 需要传入表达矩阵执行来获得降维结果
         expression = get_expression(dataset, expression_source)
         dimred = dimred(expression)
         dimred.index = cell_ids  # 这里的DataFrame手动添加索引
@@ -33,7 +32,8 @@ def add_dimred(
 
     if dimred_segment_points is not None or dimred_segment_progressions is not None:
         # TODO: 降维后的不连通的分段设置
-        pass
+        dimred_segment_points = None
+        dimred_segment_progressions = None
 
     dataset["dimred"] = dimred
     dataset["dimred_milestones"] = dimred_milestones
@@ -85,5 +85,5 @@ def get_dimred(dataset: dict,
 
 def process_dimred(dataset, dimred, identifier="cell_id", has_rownames=True):
     # TODO: 降维结果dimred为Array或DataFrame时，添加行列名，结果都成了DataFrame了
-    pd.DataFrame(dimred)
+    # pd.DataFrame(dimred)
     return dimred

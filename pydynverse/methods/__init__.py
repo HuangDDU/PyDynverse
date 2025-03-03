@@ -6,6 +6,11 @@ from .ti_scuba import ti_scuba
 from .ti_angle import ti_angle
 from .ti_grandprix import ti_grandprix
 from .ti_paga import ti_paga
+from .ti_cell_mst import ti_cell_mst
+from .ti_cluster_mst import ti_cluster_mst
+from .ti_state_comp import ti_state_comp
+
+
 __all__ = [
     "ti_comp1",
     "ti_slingshot",
@@ -15,4 +20,7 @@ __all__ = [
     "ti_angle",
     "ti_grandprix",
     "ti_paga",
+    "ti_cell_mst",
+    "ti_cluster_mst",
+    "ti_state_comp"
 ]

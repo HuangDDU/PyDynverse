@@ -12,7 +12,11 @@ pdv.logger.setLevel("DEBUG")
 
 def get_test_wrap_data():
     # 测试样例数据, 参考tests.wrap.test_wrap_add_waypoints
-    dataset, milestone_network, divergence_regions, milestone_percentages = get_test_wrap_data_ref()
+    test_wrap_data = get_test_wrap_data_ref()
+    dataset = test_wrap_data["dataset"]
+    milestone_network = test_wrap_data["milestone_network"]
+    divergence_regions = test_wrap_data["divergence_regions"]
+    milestone_percentages = test_wrap_data["milestone_percentages"]
 
     # 重新封装成带着AnnData的数据
     cell_ids = dataset["cell_ids"]

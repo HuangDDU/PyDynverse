@@ -10,7 +10,7 @@ def simplify_trajectory(trajectory, allow_self_loops=False):
     # 构造networkx图
     is_directed = trajectory["milestone_network"]["directed"].all()
     gr = nx.from_pandas_edgelist(
-        trajectory["milestone_network"],
+        trajectory["milestone_network"].rename(columns={"length": "weight"}),  # 后续需要根据length调整权重
         source="from",
         target="to",
         edge_attr=True,
@@ -33,7 +33,7 @@ def simplify_trajectory(trajectory, allow_self_loops=False):
 
     # 基于简化后的igraph图结构milestone相关数据结构
     gr = out["gr"]
-    milestone_ids = gr.nodes
+    milestone_ids = list(gr.nodes)
     milestone_network = pd.DataFrame(gr.edges(data=True), columns=["from", "to", "attributes"])
     milestone_network = pd.concat([milestone_network.drop(columns=['attributes']), milestone_network["attributes"].apply(pd.Series)], axis=1)
     milestone_network = milestone_network[["from", "to", "weight", "directed"]].rename(columns={"weight": "length"})

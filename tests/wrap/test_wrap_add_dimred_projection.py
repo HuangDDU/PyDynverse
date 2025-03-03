@@ -8,7 +8,11 @@ from ..test_util import compare_dataframes_closely
 
 def get_test_wrap_data():
     # 复用test_wrap_add_waypoints中的数据
-    dataset, milestone_network, divergence_regions, milestone_percentages = get_test_wrap_data_ref()
+    test_wrap_data = get_test_wrap_data_ref()
+    dataset = test_wrap_data["dataset"]
+    milestone_network = test_wrap_data["milestone_network"]
+    divergence_regions = test_wrap_data["divergence_regions"]
+    milestone_percentages = test_wrap_data["milestone_percentages"]
 
     # 手动指定2维降维
     dimred = pd.DataFrame(
@@ -36,14 +40,14 @@ def get_test_wrap_data():
     dimred_milestones.set_index("milestone_id", inplace=True)
 
     # 预期输出
-    expected_milestone_percentages = pd.DataFrame(
-        columns=["cell_id", "milestone_id", "percentage"],
-        data=[
-            ["e", "X", 0.5],
-            ["e", "Y", 0.5]
-        ]
-    )
-    expected_milestone_percentages = pd.concat([expected_milestone_percentages, milestone_percentages.query("cell_id != 'e'")])
+    # expected_milestone_percentages = pd.DataFrame(
+    #     columns=["cell_id", "milestone_id", "percentage"],
+    #     data=[
+    #         ["e", "X", 0.5],
+    #         ["e", "Y", 0.5]
+    #     ]
+    # )
+    # expected_milestone_percentages = pd.concat([expected_milestone_percentages, milestone_percentages.query("cell_id != 'e'")])
     expected_progressions = pd.DataFrame(
         columns=["cell_id", "from", "to", "percentage"],
         data=[
@@ -63,8 +67,8 @@ def get_test_wrap_data():
         "milestone_percentages": milestone_percentages,
         "dimred": dimred,
         "dimred_milestones": dimred_milestones,
-        "expected_milestone_percentages": expected_milestone_percentages,
-        "expected_progressions": expected_progressions,
+        # "expected_milestone_percentages": expected_milestone_percentages, # percentage是progression的间接结果
+        "expected_progressions": expected_progressions,  # progression是直接结果
     }
 
     return test_wrap_data
@@ -78,7 +82,6 @@ def test_add_dimred_projection():
     dimred_milestones = test_wrap_data["dimred_milestones"]
 
     # 预期输出
-    expected_milestone_percentages = test_wrap_data["expected_milestone_percentages"]
     expected_progressions = test_wrap_data["expected_progressions"]
 
     # 执行
@@ -89,16 +92,51 @@ def test_add_dimred_projection():
         dimred_milestones=dimred_milestones
     )
 
-    # assert trajectory["milestone_percentages"].equals(expected_milestone_percentages) # percentage是progression的间接结果
     assert compare_dataframes_closely(
         df1=trajectory["progressions"],
         df2=expected_progressions,
-        on_columns=list(expected_progressions.columns)
+        on_columns="cell_id"
     )  # progression是直接结果
 
     # TODO: dimred判断
 
+def test_add_dimred_projection_with_grouping():
+    # 添加了grouping参数的测试
+    test_wrap_data = get_test_wrap_data()
+    dataset = test_wrap_data["dataset"]
+    milestone_network = test_wrap_data["milestone_network"]
+    dimred = test_wrap_data["dimred"]
+    dimred_milestones = test_wrap_data["dimred_milestones"]
+    grouping = ["X", "X", "X", "Z", "Z", "Z"] # 聚类标签名称应该与里程碑名称一致
 
+    # 预期输出,
+    expected_progressions = pd.DataFrame(
+        columns=["cell_id", "from", "to", "percentage"],
+        data=[
+            ["a", "W", "X", 0],
+            ["b", "W", "X", 0.8],
+            ["c", "X", "Z", 0.2],
+            ["d", "X", "Z", 1],
+            ["e", "X", "Z", 0.2], # 此时e只能投影到Z相关边上，与之前有细微改变
+            ["f", "Z", "A", 0.2],
+        ]
+    )
+
+    # 执行
+    trajectory = pdv.wrap.add_dimred_projection(
+        dataset=dataset,
+        milestone_network=milestone_network,
+        dimred=dimred,
+        dimred_milestones=dimred_milestones,
+        grouping=grouping
+    )
+
+    assert compare_dataframes_closely(
+        df1=trajectory["progressions"],
+        df2=expected_progressions,
+        on_columns="cell_id"
+    )  # progression是直接结果
+   # TODO: dimred判断
 
 
 if __name__ == "__main__":
