@@ -1,238 +1,263 @@
-import numpy as np
-import networkx as nx
-import pandas as pd
 from itertools import combinations, product
-from typing import Union, List, Tuple, Dict
-from math import comb
+
+import numpy as np
+import pandas as pd
+import networkx as nx
 from ..wrap import simplify_networkx_network
-from ..util import random_time_string
 
 
 def calculate_edge_flip(
-    net1: nx.Graph,
-    net2: nx.Graph,
-    return_type: str = "score",
-    simplify: bool = False,
-    limit_flips: int = 5,
-    limit_combinations: int = 12650
-) -> Union[float, dict]:
-    # 获取对齐后的邻接矩阵
-    adj1, adj2 = get_matched_adjacencies(net1, net2, simplify)
-    
-    # 转换为二进制邻接矩阵
-    adj1_bin = (adj1 > 0).astype(int)
-    adj2_bin = (adj2 > 0).astype(int)
-    
-    # 计算边差异
-    triu_indices = np.triu_indices_from(adj1_bin, k=1)
-    edge_diff = adj2_bin[triu_indices].sum() - adj1_bin[triu_indices].sum()
-    
-    # 计算upper bound
-    upper_bound = adj1_bin[triu_indices].sum() + adj2_bin[triu_indices].sum()
-    upper_bound = max(upper_bound, 1) if upper_bound > 0 else 1
+    net1: pd.DataFrame,
+    net2: pd.DataFrame,
+    return_type="score",
+    simplify=True,
+    limit_flips=5,
+    limit_combinations=12650
+):
+    # get the matched adjacencies
+    # 提取邻接矩阵，忽略边权
+    adjacencies = get_matched_adjacencies(net1, net2, simplify=simplify)
+    adj1 = adjacencies[0] > 0
+    adj2 = adjacencies[1] > 0
 
-    # 初始化搜索参数
+    # calculate the mapping which nodes are connected to which edges
+    # 计算节点与边的对应关系，行为节点，列为边。这里为所有的边有C_n^2种排列，n为节点数量
+    edge_membership1 = calculate_edge_membership(adj1)
+
+    # substract the number of edges
+    # 提取下三角矩阵，计算边的数量差异
+    adj1_tril_mask = np.tril(adj1.values, k=-1)  # 去除对角线的下三角的邻接矩阵
+    adj2_tril_mask = np.tril(adj2.values, k=-1)
+    edge_difference = adj1_tril_mask.sum() - adj2_tril_mask.sum()
+
+    # calculate the possible edges which can be added and removed to net1
+    # 计算可能的添加、删除边再edge_membership1中的序号
+    possible_edge_additions = []
+    possible_edge_removes = []
+    # 模拟下三角序号计算
+    index2edge = edge_membership1.apply(lambda x: tuple(x.index[x == 1]), axis=1).to_dict()
+    edge2index = {edge: index for index, edge in index2edge.items()}
+    nodes1 = adj1.index.tolist()
+    n_adj1 = adj1.shape[0]
+    for j in range(n_adj1):
+        for i in range(j+1, n_adj1):
+            index = edge2index[(nodes1[j], nodes1[i])]
+            if adj1_tril_mask[i, j]:
+                possible_edge_removes.append(index)
+            else:
+                possible_edge_additions.append(index)
+
+    G2 = nx.from_pandas_adjacency(adj2)  # used later to calculate isomorphism # 使用后者net2计算同构，即net2不变，一直对net1调整
+    sorted_degrees2 = adj2.sum().sort_values().values  # used later to compare degree distributions # 对net2节点进行度排序用作后续对比
+
+    # prepare for looping over the number of edges which can be flipped
+    # 准备循环
     found = False
-    n_flips = abs(edge_diff) - 2 if edge_diff != 0 else 0
-    newadj1 = None
+    n_flips = abs(edge_difference) - 2
 
-    # 准备边成员关系矩阵
-    edge_membership = calculate_edge_membership(adj1_bin)
+    # determine upper bound
+    # 启发式搜索终止条件，最大反转次数
+    upper_bound = adj1_tril_mask.sum() + adj2_tril_mask.sum() - 2
+    if upper_bound <= 0:
+        upper_bound = 1
 
-    # 主搜索循环
-    while not found and n_flips <= upper_bound:
+    while (not found) and (n_flips <= upper_bound):
         n_flips += 2
-        
+
         if n_flips > limit_flips:
+            # 超过了限定的最多的边反转次数，算是没有找到
             n_flips = upper_bound
             break
-            
-        # 计算需要添加/删除的边数
-        n_add = (n_flips + edge_diff) // 2
-        n_remove = (n_flips - edge_diff) // 2
-        
-        # 生成可能的边操作组合
-        possible_add = np.where(adj1_bin[triu_indices] == 0)[0].tolist()
-        possible_remove = np.where(adj1_bin[triu_indices] > 0)[0].tolist()
-        
-        # 有效性检查
-        if n_add < 0 or n_remove < 0:
-            continue
-            
-        # 生成组合
-        add_combs = combn_nice(possible_add, n_add)
-        remove_combs = combn_nice(possible_remove, n_remove)
-        
-        # 组合矩阵生成
-        if n_add > 0 and n_remove > 0:
-            edge_flips = np.vstack([
-                np.repeat(add_combs, remove_combs.shape[1], axis=1),
-                np.tile(remove_combs, (1, add_combs.shape[1]))
-            ])
-        elif n_add > 0:
-            edge_flips = add_combs
         else:
-            edge_flips = remove_combs
-
-        # 分块处理（每1000个组合）
-        for chunk in np.array_split(edge_flips, max(1, edge_flips.shape[1]//1000), axis=1):
-            # 生成邻接矩阵向量
-            flip_vectors = generate_edge_flip_vectors(chunk, adj1_bin)
-            
-            # 计算度数向量
-            degree_vectors = flip_vectors.T @ edge_membership
-            
-            # 四层过滤
-            selected = np.arange(degree_vectors.shape[0])
-            
-            # 1. 最大度过滤
-            max_check = degree_vectors.max(axis=1) == adj2_bin.sum(axis=1).max()
-            selected = selected[max_check]
-            if selected.size == 0:
-                continue
-                
-            # 2. 最小度过滤
-            min_check = degree_vectors[selected].min(axis=1) == adj2_bin.sum(axis=1).min()
-            selected = selected[min_check]
-            if selected.size == 0:
-                continue
-                
-            # 3. 排序度过滤
-            sorted_check = np.all(
-                np.sort(degree_vectors[selected], axis=1) == np.sort(adj2_bin.sum(axis=1)), 
-                axis=1
-            )
-            selected = selected[sorted_check]
-            if selected.size == 0:
-                continue
-                
-            # 4. 同构检查
-            for idx in selected:
-                new_adj = flip_adj(chunk[:, idx], adj1_bin.copy())
-                if nx.is_isomorphic(
-                    nx.from_numpy_array(new_adj), 
-                    nx.from_numpy_array(adj2_bin),
-                    edge_match=lambda e1,e2: e1['weight']==e2['weight']
-                ):
-                    found = True
-                    newadj1 = new_adj
+            # calculate the number of additions and removes
+            # 计算添加和删除边的数量
+            n_additions = int((n_flips + edge_difference)/2)
+            n_removes = int((n_flips - edge_difference)/2)
+            if n_additions < 0 or n_removes < 0:
+                raise "Edge additions and removes should be integer and higher than 0"
+            else:
+                if (len(list(combinations(possible_edge_additions, n_additions))) > limit_combinations) or (len(list(combinations(possible_edge_removes, n_removes))) > limit_combinations):
+                    n_flips = upper_bound
                     break
-            if found:
-                break
+                else:
+                    # create the matrix which contains in the columns all possible flips, with in the rows the edge_id which will be flipped
+                    # 创建矩阵，在列表中包含所有的可能反转，在行中包含将翻转的edge_id
+                    edge_additions = [list(i) for i in combinations(possible_edge_additions, n_additions)]
+                    edge_removes = [list(i) for i in combinations(possible_edge_removes, n_removes)]
 
-    # 结果处理
-    if not found:
-        raise RuntimeError("No valid mapping found")
-    
+                    if n_additions > 0 and n_removes > 0:
+                        edge_flips = [i[0]+i[1] for i in product(edge_additions, edge_removes)]  # 添加和删除组合，相当于是笛卡尔积
+                    elif n_additions > 0:
+                        edge_flips = edge_additions
+                    else:
+                        edge_flips = edge_removes
+
+                    edge_flips = np.array(edge_flips).T
+
+                    # cut the edge_flips, avoiding huge memory consumption
+                    # 分成多组来计算，避免后续巨大的内存消耗
+                    grouping = np.arange(edge_flips.shape[1]) // 1000
+                    ngroups = max(grouping)
+                    group_id = -1  # 后续从0开始
+
+                    # loop over each group of edge_flips
+                    # 每一组分别批量计算
+                    while (not found) and (group_id < ngroups):
+                        group_id = group_id + 1
+                        edge_flips_group = edge_flips[:, grouping == group_id]
+
+                        # generate matrix with in the columns each flip and in the rows the vector format of the new adjacency of net1
+                        # 生成矩阵的1列为1种flip翻转后的邻接矩阵的向量格式
+                        edge_flip_vectors1 = generate_edge_flip_vectors(edge_flips_group, adj1, possible_edge_removes)  # (n_flips, n_edge) # 这里额外给要已有的边
+                        degree_vectors1 = edge_flip_vectors1 @ edge_membership1.values  # (n_flips, n_nodes)
+
+                        # now check several metrics of the new adjacency matrix, from fastest to slowest
+                        # after each check, the flips which are not OK are removed (in the selected object)
+                        # 从快到慢地检查几个指标，保留通过地指标用作后续图同构判断
+                        selected = np.arange(degree_vectors1.shape[0])
+
+                        # 快速最大度检查
+                        degree_max_check = check_degrees_max(degree_vectors1[selected], sorted_degrees2)
+                        if degree_max_check.any():
+                            selected = selected[degree_max_check]
+
+                            # 快速最小度检查
+                            degree_min_check = check_degrees_min(degree_vectors1[selected], sorted_degrees2)
+                            if degree_min_check.any():
+                                selected = selected[degree_min_check]
+
+                                # 度排序检查
+                                degree_sorted_check = check_degrees_sorted(degree_vectors1[selected], sorted_degrees2)
+                                if degree_sorted_check.any():
+                                    selected = selected[degree_sorted_check]
+
+                                    # 上述一堆度排序是为了避免不必要的图同构检测，现在可以检测同构了
+                                    for edge_flip in edge_flips_group[:, selected].T:
+                                        new_adj1 = flip_adj(edge_flip, adj1, index2edge)
+                                        G1_new = nx.from_pandas_adjacency(new_adj1, create_using=nx.Graph)
+                                        if nx.is_isomorphic(G1_new, G2):
+                                            found = True
+                                            new_adj1 = new_adj1
+                                            break
+
     score = 1 - n_flips / upper_bound
-    
-    if return_type == "all":
-        return {
-            "score": score,
-            "newadj1": newadj1,
-            "oldadj1": adj1_bin
-        }
-    else:
+    if return_type == "score":
         return score
 
+    else:
+        return {
+            "score": score,
+            "newadj1": new_adj1,
+            "oldadj1": adj1
+        }
 
-def get_matched_adjacencies(net1: nx.Graph, net2: nx.Graph, simplify: bool) -> Tuple[np.ndarray, np.ndarray]:
-    """对齐邻接矩阵并处理特殊边"""
+
+def get_adjacency_lengths(net, nodes=None):
+    # 提取邻接矩阵
+    if nodes is None:
+        nodes = sorted(net[["from", "to"]].stack().unique())
+    if net.shape[0] == 0:
+        # 没有边，全部是离散结点
+        newnet = pd.DataFrame(0, index=nodes, columns=nodes)
+    else:
+        # 转化为邻接矩阵
+        net["from"] = pd.Categorical(net["from"], categories=nodes)
+        net["to"] = pd.Categorical(net["to"], categories=nodes)
+        newnet = net.pivot_table(index="from", columns="to", values="length", aggfunc="sum", fill_value=0)
+        newnet = newnet.reindex(index=nodes, columns=nodes, fill_value=0)
+    return newnet + newnet.T
+
+
+def complete_matrix(mat, dim, fill=0):
+    # add extra rows and columns to matrix
+    # 添加额外的行列以补全矩阵
+    old_dim = mat.shape[0]
+    new_mat = np.zeros((dim, dim))
+    new_mat[:old_dim, :old_dim] = mat.values
+    nodes = mat.index.tolist() + list(range(dim-old_dim))
+    new_mat = pd.DataFrame(new_mat, index=nodes, columns=nodes)
+    return mat
+
+
+def get_matched_adjacencies(net1, net2, simplify=True,):
+    # 获得简化处理后的邻接矩阵
+
     if simplify:
-        net1 = simplify_networkx_network(net1)
-        net2 = simplify_networkx_network(net2)
-    
-    # 获取所有节点并排序
-    all_nodes = sorted(set(net1.nodes()) | set(net2.nodes()))
-    
-    # 确保节点存在
-    for node in all_nodes:
-        if node not in net1.nodes():
-            net1.add_node(node)
-        if node not in net2.nodes():
-            net2.add_node(node)
-    
-    # 生成邻接矩阵
-    adj1 = nx.to_numpy_array(net1, nodelist=all_nodes, weight='length', nonedge=0)
-    adj2 = nx.to_numpy_array(net2, nodelist=all_nodes, weight='length', nonedge=0)
-    
+        def simplify_net(net):
+            # 转化为networkX对象进行简化
+            directed = net["directed"].any()
+            net = net.rename(columns={"length": "weight"})
+            net = net.query("`from`!=`to` and `weight`!=0")  # 去除自环边和长度为0的边
+            G = nx.from_pandas_edgelist(net, source="from", target="to", create_using=nx.Graph)  # 创建无向图
+            G = simplify_networkx_network(G)  # 简化图 # TODO: 简化图的策略需要调整
+            net = nx.to_pandas_edgelist(G)
+            net = net.rename(columns={"weight": "length", "source": "from", "target": "to"})
+            net["directed"] = directed
+            # TODO: 暂时不考虑自环和重复边
+            return net
+
+        net1 = simplify_net(net1)
+        net2 = simplify_net(net2)
+
+    # 获得邻接矩阵，返回结果为DataFrame
+    adj1 = get_adjacency_lengths(net1)
+    adj2 = get_adjacency_lengths(net2)
+
+    # make the adjacency matrices have the same dimensions
+    # 补充使其具有相同的维度
+    if (adj1.shape[0] >= adj2.shape[0]):
+        adj2 = complete_matrix(adj2, adj1.shape[0], fill=0)
+    else:
+        adj1 = complete_matrix(adj1, adj2.shape[0], fill=0)
+
     return adj1, adj2
 
 
-def process_special_edges(net: nx.Graph, adj: np.ndarray, nodes: list) -> np.ndarray:
-    """处理自环边和重复边"""
-    # 插入自环边处理
-    for u, v in net.edges():
-        if u == v:
-            new_nodes = [random_time_string() for _ in range(2)]
-            adj = insert_nodes_into_edge(adj, nodes, u, v, new_nodes)
-    
-    # 处理重复边
-    edge_counts = pd.Series(net.edges()).value_counts()
-    for (u, v), cnt in edge_counts.items():
-        if cnt > 1:
-            new_node = random_time_string()
-            adj = insert_nodes_into_edge(adj, nodes, u, v, [new_node])
-    
-    return adj
+def calculate_edge_membership(adj):
+    # 计算节点与边的对应关系，行为节点，列为边。这里为所有的边有C_n^2种排列，n为节点数量
+    nodes = adj.index.tolist()
+    edge_membership = [dict(zip(edge, [1, 1])) for edge in combinations(nodes, 2)]
+    edge_membership = pd.DataFrame(edge_membership).fillna(0).astype(int)
 
-def insert_nodes_into_edge(adj: np.ndarray, nodes: list, u: str, v: str, new_nodes: list) -> np.ndarray:
-    """插入节点到边中"""
-    u_idx = nodes.index(u)
-    v_idx = nodes.index(v)
-    
-    # 扩展邻接矩阵
-    for n in new_nodes:
-        if n not in nodes:
-            nodes.append(n)
-            adj = np.pad(adj, [(0,1), (0,1)])
-    
-    # 重建边关系
-    prev_node = u
-    for n in new_nodes:
-        n_idx = nodes.index(n)
-        adj[u_idx, n_idx] = adj[n_idx, u_idx] = adj[u_idx, v_idx]/len(new_nodes)+1
-        prev_node = n
-    
-    adj[prev_node, v_idx] = adj[v_idx, prev_node] = adj[u_idx, v_idx]/len(new_nodes)+1
-    adj[u_idx, v_idx] = adj[v_idx, u_idx] = 0
-    
-    return adj
+    return edge_membership
 
-def calculate_edge_membership(adj: np.ndarray) -> np.ndarray:
-    """计算边-节点关系矩阵（修复shape mismatch问题）"""
-    triu_indices = np.triu_indices_from(adj, k=1)
-    triu_size = len(triu_indices[0])  # 直接使用索引数量
-    
-    edge_mapper = np.zeros_like(adj, dtype=int)
-    edge_mapper[triu_indices] = np.arange(triu_size)
-    
-    membership = []
-    for i in range(adj.shape[0]):
-        row = ((edge_mapper[i,:] >= 0) | (edge_mapper[:,i] >= 0)).astype(int)
-        membership.append(row)
-    
-    return np.column_stack(membership)
+# flip edges (in edge vector format)
 
-def generate_edge_flip_vectors(edge_flips: np.ndarray, adj: np.ndarray) -> np.ndarray:
-    """生成边翻转向量"""
-    triu_flat = adj[np.triu_indices_from(adj, k=1)].copy()
-    for flip in edge_flips.T:
-        triu_flat[flip] = 1 - triu_flat[flip]
-    return triu_flat.reshape(1, -1)
 
-def flip_adj(flip_indices: np.ndarray, adj: np.ndarray) -> np.ndarray:
-    """应用翻转得到新邻接矩阵"""
+def generate_edge_flip_vectors(edge_flips, adj, possible_edge_removes):
+    n = adj.shape[0]
+    adjv = np.full(int(n*(n-1)/2), 0)
+    adjv[possible_edge_removes] = 1
+    edge_flip_vectors = []
+    for edge_filp in edge_flips.T:
+        adjv = adjv.copy()
+        if not edge_filp.shape[0] == 0:
+            adjv[edge_filp] = 1 - adjv[edge_filp]
+        edge_flip_vectors.append(adjv)
+
+    return edge_flip_vectors
+
+
+def check_degrees_max(degree_vectors1, sorted_degrees2):
+    return degree_vectors1.max(axis=1) == sorted_degrees2.max()
+
+
+def check_degrees_min(degree_vectors1, sorted_degrees2):
+    return degree_vectors1.min(axis=1) == sorted_degrees2.min()
+
+
+def check_degrees_sorted(degree_vectors1, sorted_degrees2):
+    sorted_degrees1 = np.sort(degree_vectors1, axis=1)  # (n_flip, n_nodes)
+    sorted_degrees2.reshape(1, -1)  # (1, n_nodes)
+    return np.all(sorted_degrees1 == sorted_degrees2, axis=1)
+
+
+def flip_adj(edge_flip, adj, index2edge):
+    index2edge = pd.Series(index2edge)
+    # TODO: 效率比较低，待优化
     new_adj = adj.copy()
-    triu_indices = np.triu_indices_from(adj, k=1)
-    new_adj[triu_indices][flip_indices] = 1 - new_adj[triu_indices][flip_indices]
-    return np.maximum(new_adj, new_adj.T)
-
-def combn_nice(elements, k):
-    """Generate all combinations of k elements from the list, returns a numpy array."""
-    if k == 0:
-        return np.empty((0, 0), dtype=int)
-    if len(elements) < k:
-        return np.empty((0, k), dtype=int)
-    combs = list(combinations(elements, k))
-    return np.array(combs, dtype=int) if combs else np.empty((0, k), dtype=int)
+    for edge_index in edge_flip:
+        edge = index2edge[edge_index]
+        new_adj.loc[edge[1], edge[0]] = ~ adj.loc[edge[1], edge[0]]
+    new_adj = pd.DataFrame(np.tril(new_adj.values, k=-1), index=new_adj.index, columns=new_adj.index) # 只保留下三角
+    return new_adj

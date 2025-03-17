@@ -1,23 +1,38 @@
-# test_metric_flip.py
 import pytest
+import pydynverse as pdv
+
 import pandas as pd
-import networkx as nx
-from itertools import product
-from typing import Dict, Tuple
-from pydynverse.eval.metric_flip import calculate_edge_flip
 
-def test_metric_flip():
-    #原始网络数据
-    linear1= pd.DataFrame(['a','b',1,True],columns=["from","to","length","directed"])
-    linear2= pd.DataFrame([['a','b',1,True],['b','c',1,True]],columns=["from","to","length","directed"])
-    #转化为networkx数据结构
-    linear1_to_networkx1= None
-    linear2_to_networkx2= None
-    #调用函数测试返回得分
-    score=0
-    #断言
-    assert score==0
 
+def test_calculate_metrics1():
+    linear = pd.DataFrame(
+        columns=["from", "to", "length", "directed"],
+        data=[
+            ["A", "B", 1, True,],
+            ["B", "C", 2, True,],
+            ["C", "D", 3, True,],
+        ],
+    ) # 会对线性简化
+    bifurcating = pd.DataFrame(
+        data=[
+            ["A", "B", 1, True,],
+            ["B", "C", 2, True,],
+            ["B", "D", 3, True,],
+        ],
+        columns=["from", "to", "length", "directed"]
+    )
+    unsimplified_score = pdv.eval.calculate_edge_flip(linear, bifurcating, simplify=False)
+    # simplified_score = pdv.eval.calculate_edge_flip(linear, bifurcating, simplify=True)
+
+    expected_unsimplified_score = 1 - 2/4
+    # expected_simplified_score = 0
+
+    assert unsimplified_score == expected_unsimplified_score
+    # assert simplified_score == expected_simplified_score
+
+def test_calculate_metrics2():
+    # TODO: 
+    pass
 
 if __name__ == "__main__":
     pytest.main(["-v", __file__])
