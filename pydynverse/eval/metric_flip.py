@@ -28,7 +28,7 @@ def calculate_edge_flip(
     # 提取下三角矩阵，计算边的数量差异
     adj1_tril_mask = np.tril(adj1.values, k=-1)  # 去除对角线的下三角的邻接矩阵
     adj2_tril_mask = np.tril(adj2.values, k=-1)
-    edge_difference = adj1_tril_mask.sum() - adj2_tril_mask.sum()
+    edge_difference =  adj2_tril_mask.sum() - adj1_tril_mask.sum()
 
     # calculate the possible edges which can be added and removed to net1
     # 计算可能的添加、删除边再edge_membership1中的序号
@@ -176,7 +176,7 @@ def complete_matrix(mat, dim, fill=0):
     new_mat[:old_dim, :old_dim] = mat.values
     nodes = mat.index.tolist() + list(range(dim-old_dim))
     new_mat = pd.DataFrame(new_mat, index=nodes, columns=nodes)
-    return mat
+    return new_mat
 
 
 def get_matched_adjacencies(net1, net2, simplify=True,):
@@ -230,12 +230,12 @@ def generate_edge_flip_vectors(edge_flips, adj, possible_edge_removes):
     adjv[possible_edge_removes] = 1
     edge_flip_vectors = []
     for edge_filp in edge_flips.T:
-        adjv = adjv.copy()
+        edge_flip_vector = adjv.copy()
         if not edge_filp.shape[0] == 0:
-            adjv[edge_filp] = 1 - adjv[edge_filp]
-        edge_flip_vectors.append(adjv)
+            edge_flip_vector[edge_filp] = 1 - edge_flip_vector[edge_filp]
+        edge_flip_vectors.append(edge_flip_vector)
 
-    return edge_flip_vectors
+    return np.array(edge_flip_vectors)
 
 
 def check_degrees_max(degree_vectors1, sorted_degrees2):

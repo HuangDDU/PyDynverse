@@ -16,7 +16,7 @@ def convert_progressions_to_milestone_percentages(
     progressions = progressions[~(progressions["from"] == progressions["to"])]
 
     # 属于from milestone的概率
-    froms = progressions.groupby(["cell_id", "from"]).apply(lambda x: 1- x["percentage"].sum()).rename().reset_index()
+    froms = progressions.groupby(["cell_id", "from"]).apply(lambda x: 1- x["percentage"].sum()).reset_index()
     froms.columns = ["cell_id", "milestone_id","percentage"]
 
     # 属于to milestone的概率,直接取而对应的列即可

@@ -12,7 +12,7 @@ def calculate_metrics(
     dataset,
     model,
     # metrics=metrics["metric_id"],
-    metrics=["isomorphic"],
+    metrics=["isomorphic", "edge_flip"],
 ):
     # 一堆指标检查先不管
     summary_dict = {}
