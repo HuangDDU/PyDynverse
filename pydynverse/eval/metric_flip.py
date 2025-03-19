@@ -10,7 +10,7 @@ def calculate_edge_flip(
     net1: pd.DataFrame,
     net2: pd.DataFrame,
     return_type="score",
-    simplify=True,
+    simplify=False, # 提前简化过了
     limit_flips=5,
     limit_combinations=12650
 ):

@@ -11,14 +11,15 @@ from .metric_mapping import calculate_mapping_branches, calculate_mapping_milest
 def calculate_metrics(
     dataset,
     model,
+    simplify=True,
     # metrics=metrics["metric_id"],
     metrics=["isomorphic", "edge_flip"],
 ):
     # 一堆指标检查先不管
     summary_dict = {}
     # 简化轨迹
-    dataset = simplify_trajectory(dataset)
-    if model is not None:
+    if simplify:
+        dataset = simplify_trajectory(dataset)
         model = simplify_trajectory(model)
 
     # TODO: 其他指标
