@@ -1,238 +1,159 @@
-import networkx as nx
-import numpy as np
 import pandas as pd
-from typing import Tuple, List
-from scipy.linalg import eigvalsh
+import numpy as np
+import networkx as nx
+from typing import Tuple
+from pydynverse.wrap.simplify_networkx_network import simplify_networkx_network 
+from pydynverse.util.random_time_string import random_time_string
 
-# HIM公式体系完整定义
-"""
-Hybrid Ipsen-Mikhailov (HIM) 指标体系：
-
-1. HIM_distance = sqrt( (IM² + (γ*Hamming)²) / (1 + γ²) )
-2. similarity = max(0, 1 - HIM_distance)
-
-其中各分量计算如下：
-
-█ Ipsen-Mikhailov (IM) 谱距离 █
-IM = ||√Λ₁ - √Λ₂||₂ = sqrt(∑(sqrt(λ_i^{(1)}) - sqrt(λ_i^{(2)}))²)
-
-计算步骤：
-1. 对邻接矩阵A计算拉普拉斯矩阵：L = D - A，D为度矩阵
-2. 计算L的特征值：Λ = {λ_1, λ_2, ..., λ_n}（按升序排列）
-3. 对两个网络的Λ₁和Λ₂取平方根后计算欧氏距离
-
-█ Hamming 边权距离 █
-Hamming = ||A₁ - A₂||_1 = ∑|A₁[i,j] - A₂[i,j]|
-
-计算步骤：
-1. 对两个邻接矩阵对应元素求绝对差
-2. 对所有元素的差值求和
-
-█ 参数说明 █
-- γ (默认0.1): 调节谱距离与边权距离的权重
-- max(0, ...): 确保相似度不小于0
-"""
-from ..util import random_time_string  
-from ..wrap import simplify_networkx_network  
-
-#  边处理函数 
+# 辅助函数：针对自环边插入两个新节点
 def insert_two_nodes_into_selfloop(df: pd.DataFrame) -> pd.DataFrame:
-    """自环边分割处理（严格实现R代码逻辑）"""
-    self_loops = df[df['from'] == df['to']].copy()
-    if self_loops.empty:
-        return df
-    
-    new_edges = []
-    for _, row in self_loops.iterrows():
-        new_nodes = [random_time_string() for _ in range(2)]
-        split_length = row['length'] / 3
-        
-        new_edges.extend([
-            (row['from'], new_nodes[0], split_length, row['directed']),
-            (new_nodes[0], new_nodes[1], split_length, row['directed']),
-            (new_nodes[1], row['to'], split_length, row['directed'])
-        ])
-    
-    return pd.concat([
-        df[df['from'] != df['to']],
-        pd.DataFrame(new_edges, columns=df.columns)
-    ], ignore_index=True)
+    mask = df['from'] == df['to']
+    df_self = df[mask]
+    new_rows = []
+    for _, row in df_self.iterrows():
+        n = row['from']
+        l = row['length']
+        d = row['directed']
+        newn1 = random_time_string()
+        newn2 = random_time_string()
+        # 将自环边拆分为两条边，每条边的长度为原始边长的 1/3
+        new_rows.append({'from': n, 'to': newn1, 'length': l / 3, 'directed': d})
+        new_rows.append({'from': newn1, 'to': newn2, 'length': l / 3, 'directed': d})
+        new_rows.append({'from': newn2, 'to': n, 'length': l / 3, 'directed': d})
+    df_non_self = df[~mask]
+    df_new = pd.DataFrame(new_rows)
+    return pd.concat([df_non_self, df_new], ignore_index=True)
 
+# 辅助函数：针对重复边插入新节点
 def insert_one_node_into_duplicate_edges(df: pd.DataFrame) -> pd.DataFrame:
-    """重复边处理（严格实现R代码逻辑）"""
-    edge_keys = df.apply(lambda x: f"{x['from']}#{x['to']}", axis=1)
-    dup_mask = edge_keys.isin(edge_keys.value_counts()[edge_keys.value_counts() >= 2].index)
-    
-    new_edges = []
-    for idx in df[dup_mask].index:
-        row = df.loc[idx]
-        new_node = random_time_string()
-        split_length = row['length'] / 2
-        
-        new_edges.extend([
-            (row['from'], new_node, split_length, row['directed']),
-            (new_node, row['to'], split_length, row['directed'])
-        ])
-    
-    if new_edges:
-        return pd.concat([
-            df[~dup_mask],
-            pd.DataFrame(new_edges, columns=df.columns)
-        ], ignore_index=True)
-    return df
+    edge_ids = df['from'] + "#" + df['to']
+    counts = edge_ids.value_counts()
+    dup_edges = counts[counts >= 2].index
+    mask = edge_ids.isin(dup_edges)
+    new_rows = []
+    for _, row in df[mask].iterrows():
+        n = row['from']
+        t = row['to']
+        l = row['length']
+        d = row['directed']
+        newn = random_time_string()
+        new_rows.append({'from': n, 'to': newn, 'length': l / 2, 'directed': d})
+        new_rows.append({'from': newn, 'to': t, 'length': l / 2, 'directed': d})
+    df_non_dup = df[~mask]
+    df_new = pd.DataFrame(new_rows)
+    return pd.concat([df_non_dup, df_new], ignore_index=True)
 
+# 辅助函数：当只有一条边且非自环时，将其转换为双边(作者在这里为什么要使用abc?会对后续产生影响吗？)
 def change_single_edge_into_double(df: pd.DataFrame) -> pd.DataFrame:
-    """单边分割处理（严格实现R代码逻辑）"""
     if len(df) == 1 and df.iloc[0]['from'] != df.iloc[0]['to']:
         row = df.iloc[0]
-        new_node = random_time_string()
-        split_length = row['length'] / 2
-        
-        return pd.DataFrame([
-            (row['from'], new_node, split_length, row['directed']),
-            (new_node, row['to'], split_length, row['directed'])
-        ], columns=df.columns)
-    return df
-
-#  网络预处理模块 
-def process_simplified_network(
-    df: pd.DataFrame,
-    directed: bool
-) -> pd.DataFrame:
-    """
-    完整网络处理流程（对应R代码的get_matched_adjacencies中的simplify部分）
-    """
-    # Step 1: 过滤零长度自环边
-    filtered_df = df[(df['from'] != df['to']) | (df['length'] != 0)].copy()
-    
-    # Step 2: 转换为无向图（强制转换）
-    G = nx.from_pandas_edgelist(
-        filtered_df.rename(columns={'length': 'weight'}),
-        source='from',  # 修复点：指定起点列
-        target='to',    # 修复点：指定终点列
-        edge_attr=True,
-        create_using=nx.Graph  # 强制转换为无向图
-    )
-    
-    # Step 3: 简化网络
-    G_simplified = simplify_networkx_network(G)
-    
-    # Step 4: 转换回DataFrame
-    simplified_df = nx.to_pandas_edgelist(G_simplified).rename(columns={
-        'source': 'from',  # 强制列名恢复为 from/to
-        'target': 'to',
-        'weight': 'length'
-    })
-    simplified_df['directed'] = directed  # 保留原始方向标记
-    
-    # Step 5: 应用边处理流程
-    processed_df = (
-        simplified_df.pipe(insert_two_nodes_into_selfloop)
-                     .pipe(change_single_edge_into_double)
-                     .pipe(insert_one_node_into_duplicate_edges)
-    )
-    
-    return processed_df
-
-#  邻接矩阵处理模块 
-def get_adjacency_lengths(df: pd.DataFrame) -> np.ndarray:
-    """生成邻接矩阵（严格对齐R代码逻辑）"""
-    nodes = sorted(set(df['from']).union(set(df['to'])))
-    node_idx = {node: i for i, node in enumerate(nodes)}
-    size = len(nodes)
-    
-    adj = np.zeros((size, size), dtype=np.float64)
-    for _, row in df.iterrows():
-        i = node_idx[row['from']]
-        j = node_idx[row['to']]
-        adj[i, j] += row['length']
-        if not row['directed']:
-            adj[j, i] += row['length']
-    return adj
-
-def pad_matrix(mat: np.ndarray, target_size: int) -> np.ndarray:
-    """矩阵填充（严格实现R的complete_matrix逻辑）"""
-    pad_size = target_size - mat.shape[0]
-    if pad_size > 0:
-        return np.pad(mat, ((0, pad_size), (0, pad_size)), mode='constant')
-    return mat
-
-# 对齐
-def get_matched_adjacencies(
-    net1: pd.DataFrame,
-    net2: pd.DataFrame,
-    simplify: bool = True
-) -> Tuple[np.ndarray, np.ndarray]:
-    """
-    严格实现R代码的get_matched_adjacencies逻辑
-    """
-    # 保留原始方向性
-    directed1 = net1['directed'].any()
-    directed2 = net2['directed'].any()
-    
-    if simplify:
-        processed_net1 = process_simplified_network(net1, directed1)
-        processed_net2 = process_simplified_network(net2, directed2)
+        new_data = [
+            {'from': "a", 'to': "b", 'length': row['length'] / 2, 'directed': row['directed']},
+            {'from': "b", 'to': "c", 'length': row['length'] / 2, 'directed': row['directed']}
+        ]
+        return pd.DataFrame(new_data)
     else:
-        processed_net1 = net1.copy()
-        processed_net2 = net2.copy()
+        return df
+
+# 根据边表构造邻接矩阵（所有出现的节点构成方阵，缺失位置填 0）
+def get_adjacency_lengths(df: pd.DataFrame) -> np.ndarray:
+    nodes = sorted(set(df['from']).union(set(df['to'])))
+    n = len(nodes)
+    node2idx = {node: idx for idx, node in enumerate(nodes)}
+    A = np.zeros((n, n))
+    for _, row in df.iterrows():
+        i = node2idx[row['from']]
+        j = node2idx[row['to']]
+        A[i, j] = row['length']
+    return A
+
+# 若矩阵维度不足，则扩展为指定大小（填充值为0）
+def complete_matrix(mat: np.ndarray, size: int, fill: float = 0) -> np.ndarray:
+    n, m = mat.shape
+    if n == size and m == size:
+        return mat
+    new_mat = np.full((size, size), fill, dtype=mat.dtype)
+    new_mat[:n, :m] = mat
+    return new_mat
+
+# 获取匹配的两个网络的邻接矩阵（包含网络预处理和简化流程）
+def get_matched_adjacencies(net1: pd.DataFrame, net2: pd.DataFrame, simplify: bool = True) -> Tuple[np.ndarray, np.ndarray]:
+    if simplify:
+        directed1 = net1['directed'].any()
+        directed2 = net2['directed'].any()
+        
+        def process_network(net: pd.DataFrame, directed_flag: bool) -> pd.DataFrame:
+            net_proc = net.rename(columns={'length': 'weight'})
+            net_proc = net_proc[~((net_proc['from'] == net_proc['to']) & (net_proc['weight'] == 0))]
+            # 构造无向图
+            G = nx.from_pandas_edgelist(net_proc, source='from', target='to', edge_attr='weight', create_using=nx.Graph())
+            # 调用已有的简化接口
+            G_simpl = simplify_networkx_network(G)
+            # 将返回的 DataFrame 的列重命名为 'from', 'to', 'length'
+            df_simpl = nx.to_pandas_edgelist(G_simpl)
+            df_simpl = df_simpl.rename(columns={'source': 'from', 'target': 'to', 'weight': 'length'})
+            df_simpl['directed'] = directed_flag
+            df_simpl = insert_two_nodes_into_selfloop(df_simpl)
+            df_simpl = change_single_edge_into_double(df_simpl)
+            df_simpl = insert_one_node_into_duplicate_edges(df_simpl)
+            return df_simpl
+
+        net1 = process_network(net1, directed1)
+        net2 = process_network(net2, directed2)
     
-    # 生成邻接矩阵
-    adj1 = get_adjacency_lengths(processed_net1)
-    adj2 = get_adjacency_lengths(processed_net2)
+    adj1 = get_adjacency_lengths(net1)
+    adj2 = get_adjacency_lengths(net2)
     
-    # 统一矩阵维度
-    max_size = max(adj1.shape[0], adj2.shape[0])
-    adj1 = pad_matrix(adj1, max_size)
-    adj2 = pad_matrix(adj2, max_size)
+    size = max(adj1.shape[0], adj2.shape[0])
+    if adj1.shape[0] < size:
+        adj1 = complete_matrix(adj1, size, fill=0)
+    if adj2.shape[0] < size:
+        adj2 = complete_matrix(adj2, size, fill=0)
     
     return adj1, adj2
 
-#  核心计算模块 
-def calculate_him(
-    net1: pd.DataFrame,
-    net2: pd.DataFrame,
-    simplify: bool = True,
-    ga: float = 0.1
-) -> float:
-    """
-    严格实现R代码的calculate_him逻辑
-    """
-    adj1, adj2 = get_matched_adjacencies(net1, net2, simplify)
-    
-    # 空图检查
-    if np.all(adj1 == 0) or np.all(adj2 == 0):
-        return 0.0
-    
-    # 直接计算距离，跳过归一化
-    him_distance = compute_him_distance(adj1, adj2, ga)
-    return max(0.0, 1.0 - him_distance)
+# 计算拉普拉斯矩阵 L = D - A
+def laplacian_matrix(adj: np.ndarray) -> np.ndarray:
+    D = np.diag(adj.sum(axis=1))
+    return D - adj
 
-def compute_him_distance(
-    m1: np.ndarray,
-    m2: np.ndarray,
-    ga: float
-) -> float:
-    """HIM距离核心计算"""
-    # 计算Ipsen-Mikhailov距离（修复：特征值排序）
-    L1 = compute_laplacian(m1)
-    L2 = compute_laplacian(m2)
-    eig1 = eigvalsh(L1)  # eigvalsh 默认返回升序
-    eig2 = eigvalsh(L2)
-    im = np.linalg.norm(np.sqrt(eig1) - np.sqrt(eig2))  # 正确平方根
-    
-    # 计算Hamming距离
-    hamming = np.abs(m1 - m2).sum()
-    
-    # 组合公式
-    return np.sqrt((im**2 + (ga * hamming)**2) / (1 + ga**2))
-def compute_laplacian0(matrix: np.ndarray) -> np.ndarray:
-    """生成对称拉普拉斯矩阵"""
-    matrix_sym = (matrix + matrix.T) / 2  # 强制对称化
-    D = np.diag(matrix_sym.sum(axis=1))
-    return D - matrix_sym
+# 计算 Ipsen–Mikhailov 距离（基于拉普拉斯矩阵特征值的平方根差）
+def ipsen_mikhailov_distance_eigen(adj1: np.ndarray, adj2: np.ndarray) -> float:
+    L1 = laplacian_matrix(adj1)
+    L2 = laplacian_matrix(adj2)
+    eigs1 = np.linalg.eigvalsh(L1)
+    eigs2 = np.linalg.eigvalsh(L2)
+    # 确保非负后取平方根
+    sqrt_eigs1 = np.sqrt(np.maximum(eigs1, 0))
+    sqrt_eigs2 = np.sqrt(np.maximum(eigs2, 0))
+    # 两个向量间的欧氏距离
+    return np.linalg.norm(sqrt_eigs1 - sqrt_eigs2)
 
-def compute_laplacian(matrix: np.ndarray) -> np.ndarray:
-    """生成拉普拉斯矩阵（无向图）"""
-    D = np.diag(matrix.sum(axis=1))
-    return D - matrix
+# 计算 Hamming 边权距离（元素绝对差之和）
+def hamming_distance(adj1: np.ndarray, adj2: np.ndarray) -> float:
+    return np.sum(np.abs(adj1 - adj2))
+
+# 根据公式计算 HIM 距离
+def him_distance(adj1: np.ndarray, adj2: np.ndarray, gamma: float = 0.1) -> float:
+    IM = ipsen_mikhailov_distance_eigen(adj1, adj2)
+    H = hamming_distance(adj1, adj2)
+    # 根据公式： sqrt((IM^2 + (γ*Hamming)^2)/(1+γ^2))
+    return np.sqrt((IM**2 + (gamma * H)**2) / (1 + gamma**2))
+
+# 主函数：计算 HIM 相似性度量，返回 max(0, 1 - HIM_distance)
+def calculate_him(net1: pd.DataFrame, net2: pd.DataFrame, simplify: bool = True, gamma: float = 0.1) -> float:
+    adj1, adj2 = get_matched_adjacencies(net1, net2, simplify=simplify)
+    
+    # 若任一邻接矩阵全为0，则返回 0
+    if np.max(adj1) == 0 or np.max(adj2) == 0:
+        return 0
+    
+    # 对邻接矩阵归一化，确保总和为1
+    norm_adj1 = adj1 / np.sum(adj1)
+    norm_adj2 = adj2 / np.sum(adj2)
+    
+    # 计算 HIM 距离，根据定义计算相似度
+    distance = him_distance(norm_adj1, norm_adj2, gamma=gamma)
+    similarity = max(0, 1 - distance)
+    return similarity
+
