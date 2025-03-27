@@ -64,11 +64,11 @@ def test_calculate_metrics():
     )
 
     summary_dict_self = pdv.eval.calculate_metrics(dataset, dataset)  # 自身计算指标，一定是指标最大值
-    summary_dict = pdv.eval.calculate_metrics(dataset, model)
+    summary_dict = pdv.eval.calculate_metrics(dataset, model) 
     assert summary_dict_self["isomorphic"] == 1
     assert summary_dict_self["edge_flip"] == 1
     assert summary_dict["isomorphic"] == 0
-    assert summary_dict["edge_flip"] == 0
+    assert summary_dict["edge_flip"] == 0 # 此处对拓扑简化操作，结果为0
 
 
 if __name__ == "__main__":

@@ -1,4 +1,4 @@
-from .wrap_add_expression import wrap_expression, is_wrapper_with_expression
+from .wrap_add_expression import add_expression, wrap_expression, is_wrapper_with_expression
 from .method_infer_trajectory import infer_trajectory, infer_trajectories
 from .wrap_add_dimred import add_dimred
 from .method_create_ti_method_container import create_ti_method_container
@@ -25,6 +25,7 @@ from .wrap_add_cyclic_trajectory import add_cyclic_trajectory
 from .method_create_ti_method_py import create_ti_method_py
 
 __all__ = [
+	"add_expression",
     "wrap_expression",
     "is_wrapper_with_expression",
     "infer_trajectory",

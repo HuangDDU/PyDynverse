@@ -4,7 +4,7 @@ import pydynverse as pdv
 import pandas as pd
 
 
-def test_calculate_metrics_linear_bifurcation():
+def test_metric_flip_linear_bifurcation():
     # 对比线性拓扑和分支拓扑
     linear = pd.DataFrame(
         columns=["from", "to", "length", "directed"],
@@ -32,7 +32,7 @@ def test_calculate_metrics_linear_bifurcation():
     assert simplified_score == expected_simplified_score
 
 
-def test_calculate_metrics_bifurcatiion_star():
+def test_metric_flip_bifurcatiion_star():
     # 对比分支拓扑和星型拓扑
     bifurcatiion = pd.DataFrame(
         columns=["from", "to", "length", "directed"],
