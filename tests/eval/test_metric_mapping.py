@@ -8,8 +8,11 @@ import pandas as pd
 def get_test_wrap_data():
     from tests.wrap.test_wrap_add_waypoints import get_test_wrap_data as get_test_wrap_data_ref
     # 这里复用了test_wrap_add_waypoint的数据
-    dataset, milestone_network, divergence_regions, milestone_percentages = get_test_wrap_data_ref()
-
+    test_data = get_test_wrap_data_ref()
+    dataset=test_data["dataset"]
+    milestone_network=test_data["milestone_network"]
+    divergence_regions=test_data["divergence_regions"]
+    milestone_percentages=test_data["milestone_percentages"]
     # 添加轨迹
     trajectory_ref = pdv.wrap.add_trajectory(
         dataset,

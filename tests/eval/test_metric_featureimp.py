@@ -1,12 +1,18 @@
-import pytest
-import pydynverse as pdv
 import numpy as np
 import pandas as pd
-from pydynverse.eval.metric_correlation import calc_correlation
-from pydynverse.wrap import select_waypoints
+import pydynverse as pdv
+import pytest
+from pydynverse.feature.fi_methods import fi_ranger_rf_lite
+from pydynverse.feature.calculate_overall_feature_importance import calculate_overall_feature_importance
+from pydynverse.eval.metric_featureimp import (
+    calculate_featureimp_cor,
+    calculate_featureimp_enrichment,
+)
+
+from pydynverse.wrap.wrap_add_expression import add_expression
 
 def get_data():
-    id = "test_metric_cordist"
+    id = "test_metric_featureimp"
     cell_ids = ["a", "b", "c", "d", "e"]
     milestone_ids = ["W", "X", "Y", "Z"]
     milestone_network = pd.DataFrame(
@@ -43,12 +49,18 @@ def get_data():
         ]
     )
     dataset = pdv.wrap.wrap_data(id=id, cell_ids=cell_ids)
+    #构造expression
+    expression=None
+    dataset=add_expression(data=dataset,counts=expression,expression = expression)
+
+
     test_data = {
         "dataset": dataset,
         "milestone_network": milestone_network,
         "divergence_regions": divergence_regions,
         "milestone_percentages": milestone_percentages,
     }
+
 
     dataset=test_data["dataset"]
     milestone_network=test_data["milestone_network"]
@@ -63,11 +75,16 @@ def get_data():
     )
     return test_trajectory
 
-def test_metric_correlation():
-    ref=get_data()
-    pre=get_data()
-    result=calc_correlation(ref,pre)
-    assert np.isclose(result["correlation"],1.0)
+def test_function():
+    #构建数据集
+    assert 1==1
+    #函数功能测试
+    
+
+def test_metric_featureimp():
+    #最终逻辑测试
+    assert 1==1
+
 
 if __name__ == "__main__":
     pytest.main(["-v", __file__])

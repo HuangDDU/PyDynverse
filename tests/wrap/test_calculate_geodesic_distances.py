@@ -74,7 +74,7 @@ def test_calculate_geodesic_distances():
     trajectory = get_data()
     out = calculate_geodesic_distances(trajectory, graph_package="igraph")
 
-    assert True
+    assert True 
 
 
 if __name__ == "__main__":
