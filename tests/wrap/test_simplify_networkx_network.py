@@ -27,7 +27,7 @@ def test_simplify_networkx_network():
         columns=["id", "from", "to", "percentage"]
     )
     gr = nx.from_pandas_edgelist(net, source="from", target="to", create_using=nx.DiGraph() if directed else nx.Graph)  # 构造graph
-
+ 
     out = pdv.wrap.simplify_networkx_network(gr, edge_points=edge_points)
     new_gr = out["gr"]
     new_edge_points = out["edge_points"]

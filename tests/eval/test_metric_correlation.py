@@ -1,18 +1,12 @@
 import pytest
 import pydynverse as pdv
-
-import time
+import numpy as np
 import pandas as pd
-from pydynverse.wrap.calculate_geodesic_distances import calculate_geodesic_distances
-
-# def test_calculate_geodesic_distances():
-
-#     # 从test_wrap_add_waypoints.py导入测试样例数据
-#     from .test_wrap_add_waypoints import get_test_wrap_data
-#     dataset, milestone_network, divergence_regions, milestone_percentages = get_test_wrap_data()
+from pydynverse.eval.metric_correlation import calc_correlation
+from pydynverse.wrap import select_waypoints
 
 def get_data():
-    id = "test_calculate_geodesic_distances"
+    id = "test_metric_cordist"
     cell_ids = ["a", "b", "c", "d", "e"]
     milestone_ids = ["W", "X", "Y", "Z"]
     milestone_network = pd.DataFrame(
@@ -69,13 +63,11 @@ def get_data():
     )
     return test_trajectory
 
-def test_calculate_geodesic_distances():
-    # dataset = pdv.data.load_simulation_data()
-    trajectory = get_data()
-    out = calculate_geodesic_distances(trajectory, graph_package="igraph")
-
-    assert True 
-
+def test_metric_correlation():
+    ref=get_data()
+    pre=get_data()
+    result=calc_correlation(ref,pre)
+    assert np.isclose(result["correlation"],1.0)
 
 if __name__ == "__main__":
     pytest.main(["-v", __file__])

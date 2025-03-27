@@ -10,7 +10,7 @@ def calculate_edge_flip(
     net1: pd.DataFrame,
     net2: pd.DataFrame,
     return_type="score",
-    simplify=False, # 提前简化过了
+    simplify=False,  # 提前简化过了
     limit_flips=5,
     limit_combinations=12650
 ):
@@ -28,7 +28,7 @@ def calculate_edge_flip(
     # 提取下三角矩阵，计算边的数量差异
     adj1_tril_mask = np.tril(adj1.values, k=-1)  # 去除对角线的下三角的邻接矩阵
     adj2_tril_mask = np.tril(adj2.values, k=-1)
-    edge_difference =  adj2_tril_mask.sum() - adj1_tril_mask.sum()
+    edge_difference = adj2_tril_mask.sum() - adj1_tril_mask.sum()
 
     # calculate the possible edges which can be added and removed to net1
     # 计算可能的添加、删除边再edge_membership1中的序号
@@ -259,5 +259,5 @@ def flip_adj(edge_flip, adj, index2edge):
     for edge_index in edge_flip:
         edge = index2edge[edge_index]
         new_adj.loc[edge[1], edge[0]] = ~ adj.loc[edge[1], edge[0]]
-    new_adj = pd.DataFrame(np.tril(new_adj.values, k=-1), index=new_adj.index, columns=new_adj.index) # 只保留下三角
+    new_adj = pd.DataFrame(np.tril(new_adj.values, k=-1), index=new_adj.index, columns=new_adj.index)  # 只保留下三角
     return new_adj

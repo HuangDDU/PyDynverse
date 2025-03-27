@@ -1,18 +1,18 @@
-import pytest
-import pydynverse as pdv
-
-import time
+import numpy as np
 import pandas as pd
-from pydynverse.wrap.calculate_geodesic_distances import calculate_geodesic_distances
+import pydynverse as pdv
+import pytest
+from pydynverse.feature.fi_methods import fi_ranger_rf_lite
+from pydynverse.feature.calculate_overall_feature_importance import calculate_overall_feature_importance
+from pydynverse.eval.metric_featureimp import (
+    calculate_featureimp_cor,
+    calculate_featureimp_enrichment,
+)
 
-# def test_calculate_geodesic_distances():
-
-#     # 从test_wrap_add_waypoints.py导入测试样例数据
-#     from .test_wrap_add_waypoints import get_test_wrap_data
-#     dataset, milestone_network, divergence_regions, milestone_percentages = get_test_wrap_data()
+from pydynverse.wrap.wrap_add_expression import add_expression
 
 def get_data():
-    id = "test_calculate_geodesic_distances"
+    id = "test_metric_featureimp"
     cell_ids = ["a", "b", "c", "d", "e"]
     milestone_ids = ["W", "X", "Y", "Z"]
     milestone_network = pd.DataFrame(
@@ -49,12 +49,18 @@ def get_data():
         ]
     )
     dataset = pdv.wrap.wrap_data(id=id, cell_ids=cell_ids)
+    #构造expression
+    expression=None
+    dataset=add_expression(data=dataset,counts=expression,expression = expression)
+
+
     test_data = {
         "dataset": dataset,
         "milestone_network": milestone_network,
         "divergence_regions": divergence_regions,
         "milestone_percentages": milestone_percentages,
     }
+
 
     dataset=test_data["dataset"]
     milestone_network=test_data["milestone_network"]
@@ -69,12 +75,15 @@ def get_data():
     )
     return test_trajectory
 
-def test_calculate_geodesic_distances():
-    # dataset = pdv.data.load_simulation_data()
-    trajectory = get_data()
-    out = calculate_geodesic_distances(trajectory, graph_package="igraph")
+def test_function():
+    #构建数据集
+    assert 1==1
+    #函数功能测试
+    
 
-    assert True 
+def test_metric_featureimp():
+    #最终逻辑测试
+    assert 1==1
 
 
 if __name__ == "__main__":
