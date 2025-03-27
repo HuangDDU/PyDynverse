@@ -8,7 +8,11 @@ import pandas as pd
 def get_test_wrap_data():
     from tests.wrap.test_wrap_add_waypoints import get_test_wrap_data as get_test_wrap_data_ref
     # 这里复用了test_wrap_add_waypoint的数据
-    dataset, milestone_network, divergence_regions, milestone_percentages = get_test_wrap_data_ref()
+    test_wrap_data= get_test_wrap_data_ref()
+    dataset = test_wrap_data["dataset"]
+    milestone_network = test_wrap_data["milestone_network"]
+    divergence_regions = test_wrap_data["divergence_regions"]
+    milestone_percentages = test_wrap_data["milestone_percentages"]
 
     # 添加轨迹
     trajectory_ref = pdv.wrap.add_trajectory(
@@ -34,13 +38,20 @@ def get_test_wrap_data():
         milestone_percentages=new_milestone_percentages
     )
 
-    return trajectory_ref, trajectory_pre
+    test_wrap_data = {
+        "trajectory_ref": trajectory_ref,
+        "trajectory_pre": trajectory_pre,
+    }
+
+    return test_wrap_data
 
 
 def test_metric_mapping():
 
     # 1. 提取参考、预测轨迹
-    trajectory_ref, trajectory_pre = get_test_wrap_data()
+    test_wrap_data = get_test_wrap_data()
+    trajectory_ref = test_wrap_data["trajectory_ref"]
+    trajectory_pre = test_wrap_data["trajectory_pre"]
 
     # 2.调用接口获得模型结果
     result_milestones = pdv.eval.calculate_mapping_milestones(trajectory_ref, trajectory_pre)
